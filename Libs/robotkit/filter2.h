@@ -9,7 +9,8 @@ typedef struct {
 } filter2_t;
 
 void filter2_init(filter2_t *f, float k, float freq);
-void filter2_predict(filter2_t *f, float gyro1, float gyro2);
-void filter2_update(filter2_t *f, float encoder);
+void filter2_update_gyro1(filter2_t *f, float gyro);
+void filter2_update_gyro2(filter2_t *f, float gyro);
+void filter2_update_encoder(filter2_t *f, float encoder);
 
 #endif
