@@ -2,6 +2,7 @@
 #include "dps310.h"
 #include "dps310_registers.h"
 #include "dps310_errors.h"
+#include "stdbool.h"
 #include <math.h>
 #include <platform.h>
 
@@ -42,54 +43,42 @@ static int16_t product_id_check();
 
 static int16_t get_temperature_sensor(uint8_t *p_sensor);
 
+static void flash(uint8_t count) {
+	platform_delay(250);
+
+	for (int i = 0; i < count; i++) {
+		platform_register_toggle_led(0);
+		platform_delay(250);
+	}
+
+	platform_delay(250);
+}
+
 int16_t dps310_probe() {
-    int16_t ret = 0;
+    int16_t ret;
 
     dps310_enable();
-    platform_delay(100);
 
     ret = product_id_check();
-    if (ret != DPS310_OK) while (1) {
-    	platform_toggle_led(0);
-    	platform_delay(100);
-    }
+    if (ret != DPS310_OK) while (1) flash(1);
 
-    dps310_configure_temperature(DPS310_CFG_RATE_4_MEAS | DPS310_PRS_CFG_PM_PRC_4_TIMES);
-    platform_delay(100);
+    dps310_configure_temperature(DPS310_CFG_RATE_1_MEAS | DPS310_TMP_CFG_TMP_PRC_SINGLE);
     dps310_configure_pressure(DPS310_CFG_RATE_4_MEAS | DPS310_PRS_CFG_PM_PRC_4_TIMES);
-    platform_delay(100);
 
     ret = read_coefs();
-    platform_delay(100);
-    if (ret != DPS310_OK) while (1) {
-    	platform_toggle_led(0);
-    	platform_delay(100);
-    }
+    if (ret != DPS310_OK) while (1) flash(2);
 
     ret = dps310_sleep();
-    platform_delay(100);
-    if (ret != DPS310_OK) while (1) {
-    	platform_toggle_led(0);
-    	platform_delay(100);
-    }
+    if (ret != DPS310_OK) while (1) flash(3);
 
-    float trash = 0;
+    float trash;
     read_temperature(&trash);
-    platform_delay(100);
 
     ret = dps310_sleep();
-    platform_delay(100);
-    if (ret != DPS310_OK) while (1) {
-    	platform_toggle_led(0);
-    	platform_delay(100);
-    }
+    if (ret != DPS310_OK) while (1) flash(4);
 
     ret = correct_temperature();
-    platform_delay(100);
-    if (ret != DPS310_OK) while (1) {
-    	platform_toggle_led(0);
-    	platform_delay(100);
-    }
+    if (ret != DPS310_OK) while (1) flash(5);
 
     return DPS310_OK;
 }
@@ -107,8 +96,8 @@ int16_t dps310_reset() {
 }
 
 int16_t read_coefs() {
-    int16_t ret = 0;
-    uint8_t buff[18] = {0};
+    int16_t ret;
+    uint8_t buff[18];
 
     ret = wait_for_reg_value(
             DPS310_MEAS_CFG_REG,
@@ -132,7 +121,7 @@ int16_t read_coefs() {
 }
 
 int16_t dps310_configure_temperature(uint8_t data) {
-    int16_t ret = 0;
+    int16_t ret;
     uint8_t temperature_sensor = DPS310_TMP_CFG_REG_TMP_EXT_EXTERNAL;
 
     ret = get_temperature_sensor(&temperature_sensor);
@@ -150,8 +139,8 @@ int16_t dps310_configure_pressure(uint8_t data) {
 }
 
 int16_t write_byte_to_reg(uint8_t reg_addr, uint8_t data) {
-    int16_t ret = 0;
-    uint8_t buff[1] = {0};
+    int16_t ret;
+    uint8_t buff[1];
 
     buff[0] = data;
     ret = dps310_i2c_write(I2C_DPS310_ADDRESS, reg_addr, buff, 1);
@@ -166,7 +155,7 @@ int16_t dps310_read(float *p_temperature, float *p_pressure) {
     ret = read_temperature(p_temperature);
     if (ret != DPS310_OK) return ret;
 
-    dps310_i2c_delay_ms(1); //50ms
+    dps310_i2c_delay_ms(1);  //50ms
 
     ret = read_pressure(p_pressure);
     if (ret != DPS310_OK) return ret;
@@ -175,8 +164,8 @@ int16_t dps310_read(float *p_temperature, float *p_pressure) {
 }
 
 static int16_t read_temperature(float *p_temperature) {
-    int16_t ret = 0;
-    uint8_t buff[1] = {0};
+    int16_t ret;
+    uint8_t buff[3];
 
     ret = write_byte_to_reg(DPS310_MEAS_CFG_REG, DPS310_MEAS_CFG_MEAS_CTRL_TMP);
     if (ret != DPS310_OK) return ret;
@@ -205,8 +194,8 @@ static int16_t read_temperature(float *p_temperature) {
 }
 
 int16_t read_pressure(float *p_pressure) {
-    int16_t ret = 0;
-    uint8_t buff[1] = {0};
+    int16_t ret;
+    uint8_t buff[3];
 
     ret = write_byte_to_reg(DPS310_MEAS_CFG_REG, DPS310_MEAS_CFG_MEAS_CTRL_PRS);
     if (ret != DPS310_OK) return ret;
@@ -236,8 +225,8 @@ int16_t read_pressure(float *p_pressure) {
 }
 
 int16_t wait_for_reg_value(uint8_t reg_addr, uint8_t reg_value, uint8_t mask) {
-    int16_t ret = 0;
-    uint8_t buff[1] = {0};
+    int16_t ret;
+    uint8_t buff[1];
     uint16_t attempts = 0;
 
     while (attempts < DPS310_READ_WAIT_FOR_REG_ATTEMPTS) {
@@ -246,7 +235,7 @@ int16_t wait_for_reg_value(uint8_t reg_addr, uint8_t reg_value, uint8_t mask) {
         ret = dps310_i2c_read(I2C_DPS310_ADDRESS, reg_addr, buff, 1);
         if (ret != DPS310_OK) return ret;
 
-        char b_is_expected_value = ((buff[0] & mask) == reg_value);
+        bool b_is_expected_value = ((buff[0] & mask) == reg_value);
         if (b_is_expected_value) return DPS310_OK;
 
         dps310_i2c_delay_ms(1); //10ms
@@ -296,7 +285,7 @@ int16_t get_scale_factor_for(uint8_t rate, uint32_t *p_factor) {
 
 int32_t get_two_complement_of(uint32_t value, uint8_t length) {
     int32_t ret = value;
-    char b_is_negative = value & (1u << (length - 1u));
+    bool b_is_negative = value & (1u << (length - 1u));
 
     if (b_is_negative) {
         ret -= ((uint32_t) 1 << length);
@@ -306,7 +295,7 @@ int32_t get_two_complement_of(uint32_t value, uint8_t length) {
 }
 
 int16_t correct_temperature() {
-    int16_t ret = 0;
+    int16_t ret;
 
     ret = write_byte_to_reg(0x0E, 0xA5);
     if (ret != DPS310_OK) return ret;
@@ -327,21 +316,21 @@ int16_t correct_temperature() {
 }
 
 int16_t product_id_check() {
-    int16_t ret = 0;
-    uint8_t buff[1] = {0};
+    int16_t ret;
+    uint8_t buff[1];
 
     ret = dps310_i2c_read(I2C_DPS310_ADDRESS, DPS310_PRODUCT_ID_REG, buff, 1);
     if (ret != DPS310_OK) return ret;
 
-    char b_is_product_id_valid = buff[0] == DPS310_PRODUCT_ID_VALUE;
+    bool b_is_product_id_valid = buff[0] == DPS310_PRODUCT_ID_VALUE;
     if (!b_is_product_id_valid) return DPS310_PRODUCT_ID_ERROR;
 
     return DPS310_OK;
 }
 
 int16_t get_temperature_sensor(uint8_t *p_sensor) {
-    int16_t ret = 0;
-    uint8_t buff[1] = {0};
+    uint16_t ret;
+    uint8_t buff[1];
 
     ret = dps310_i2c_read(I2C_DPS310_ADDRESS, DPS310_TMP_COEF_SRCE, buff, 1);
     if (ret != DPS310_OK) return ret;
@@ -358,7 +347,7 @@ int16_t get_temperature_sensor(uint8_t *p_sensor) {
 }
 
 float get_altitude(void) {
-	float pressure, temperature = 0;
+	float pressure, temperature;
 	dps310_read(&temperature, &pressure);
 	return 44330 * (1 - pow(pressure/101325, 1/5.255));
 }

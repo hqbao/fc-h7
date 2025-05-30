@@ -78,15 +78,15 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_I2C3_Init(void);
+static void MX_I2C4_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_USART3_UART_Init(void);
-static void MX_I2C4_Init(void);
 static void MX_TIM13_Init(void);
 static void MX_TIM14_Init(void);
 static void MX_TIM16_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_USART3_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -398,15 +398,15 @@ int main(void)
   MX_DMA_Init();
   MX_I2C1_Init();
   MX_I2C3_Init();
+  MX_I2C4_Init();
   MX_TIM1_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
-  MX_USART1_UART_Init();
-  MX_USART3_UART_Init();
-  MX_I2C4_Init();
   MX_TIM13_Init();
   MX_TIM14_Init();
   MX_TIM16_Init();
+  MX_USART1_UART_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_Delay(100);
