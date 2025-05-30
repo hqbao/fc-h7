@@ -18,7 +18,7 @@
 
 # Libraries
 *.lib
-*.a
+#*.a
 *.la
 *.lo
 
@@ -51,4 +51,4 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-Debug/*
+Debug
