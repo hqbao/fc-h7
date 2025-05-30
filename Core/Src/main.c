@@ -57,6 +57,7 @@ TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim7;
 TIM_HandleTypeDef htim13;
 TIM_HandleTypeDef htim14;
+TIM_HandleTypeDef htim16;
 DMA_HandleTypeDef hdma_tim1_ch1;
 DMA_HandleTypeDef hdma_tim1_ch2;
 DMA_HandleTypeDef hdma_tim1_ch3;
@@ -85,6 +86,7 @@ static void MX_USART3_UART_Init(void);
 static void MX_I2C4_Init(void);
 static void MX_TIM13_Init(void);
 static void MX_TIM14_Init(void);
+static void MX_TIM16_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -103,61 +105,59 @@ typedef struct {
   int buffer_idx;
 } uart_rx_t;
 
-I2C_HandleTypeDef* i2c_ports[3] = {&hi2c1, &hi2c3, &hi2c4};
+static I2C_HandleTypeDef* i2c_ports[3] = {&hi2c1, &hi2c3, &hi2c4};
+static UART_HandleTypeDef* uart_ports[1] = {&huart1};
+static TIM_HandleTypeDef* g_pwm_timers[4] = {&htim1, &htim1, &htim1, &htim1};
+static uint32_t g_pwm_timer_channels[4] = {TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, TIM_CHANNEL_4};
+static TIM_TypeDef *g_pwm_time_bases[4] = {TIM1, TIM1, TIM1, TIM1};
 
-UART_HandleTypeDef* uart_ports[1] = {&huart1};
+static dshot_t g_dshots[4];
 
-TIM_HandleTypeDef* g_pwm_timers[4] = {&htim1, &htim1, &htim1, &htim1};
-uint32_t g_pwm_timer_channels[4] = {TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, TIM_CHANNEL_4};
-TIM_TypeDef *g_pwm_time_bases[4] = {TIM1, TIM1, TIM1, TIM1};
+static dshot_ex_t g_dshot_exs[4];
 
-dshot_t g_dshots[4];
+static uart_rx_t g_uart_rx1 = {0, {0}, {0}, 0, 0, 0};
+static uart_rx_t g_uart_rx2 = {0, {0}, {0}, 0, 0, 0};
 
-dshot_ex_t g_dshot_exs[4];
-
-uart_rx_t g_uart_rx1 = {0, {0}, {0}, 0, 0, 0};
-uart_rx_t g_uart_rx2 = {0, {0}, {0}, 0, 0, 0};
-
-void toggle_led(char led) {
+static void toggle_led(char led) {
 	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_0);
 }
 
-void delay(uint32_t ms) {
+static void delay(uint32_t ms) {
 	HAL_Delay(ms);
 }
 
-uint32_t time_ms(void) {
+static uint32_t time_ms(void) {
 	return HAL_GetTick();
 }
 
-char i2c_write_read_dma(i2c_port_t port, uint8_t address, uint8_t *input, uint16_t input_size,
+static char i2c_write_read_dma(i2c_port_t port, uint8_t address, uint8_t *input, uint16_t input_size,
 		uint8_t *output, uint16_t output_size) {
 	return HAL_I2C_Mem_Read_DMA(i2c_ports[port], address, *(uint16_t*)input, input_size, output, output_size);
 }
 
-char i2c_write_read(i2c_port_t port, uint8_t address, uint8_t *input, uint16_t input_size,
+static char i2c_write_read(i2c_port_t port, uint8_t address, uint8_t *input, uint16_t input_size,
 		uint8_t *output, uint16_t output_size, uint32_t timeout) {
 	return HAL_I2C_Mem_Read(i2c_ports[port], address, *(uint16_t*)input, input_size, output, output_size, timeout);
 }
 
-char i2c_read(i2c_port_t port, uint8_t address, uint8_t *output, uint16_t output_size) {
+static char i2c_read(i2c_port_t port, uint8_t address, uint8_t *output, uint16_t output_size) {
 	return HAL_I2C_Master_Receive(i2c_ports[port], address, output, output_size, 1000);
 }
 
-char i2c_write(i2c_port_t port, uint8_t address, uint8_t *input, uint16_t input_size) {
+static char i2c_write(i2c_port_t port, uint8_t address, uint8_t *input, uint16_t input_size) {
 	return HAL_I2C_Master_Transmit(i2c_ports[port], address, input, input_size, 1000);
 }
 
-char uart_send(uart_port_t port, uint8_t *data, uint16_t data_size) {
+static char uart_send(uart_port_t port, uint8_t *data, uint16_t data_size) {
 	return HAL_UART_Transmit_IT(uart_ports[port], data, data_size);
 }
 
-char pwm_init(pwm_port_t port) {
+static char pwm_init(pwm_port_t port) {
 	HAL_TIM_PWM_Start(g_pwm_timers[port], g_pwm_timer_channels[port]);
 	return 0;
 }
 
-void set_pwm(TIM_TypeDef *timer_base, uint32_t channel, uint32_t duty) {
+static void set_pwm(TIM_TypeDef *timer_base, uint32_t channel, uint32_t duty) {
 	switch (channel) {
 	case TIM_CHANNEL_1:
 		timer_base->CCR1 = duty;
@@ -176,12 +176,12 @@ void set_pwm(TIM_TypeDef *timer_base, uint32_t channel, uint32_t duty) {
 	}
 }
 
-char pwm_send(pwm_port_t port, uint32_t data) {
+static char pwm_send(pwm_port_t port, uint32_t data) {
 	set_pwm(g_pwm_time_bases[port], g_pwm_timer_channels[port], data);
 	return 0;
 }
 
-char _dshot_init(dshot_port_t port) {
+static char _dshot_init(dshot_port_t port) {
 	switch (port) {
 	case DSHOT_PORT1:
 		dshot_init(&g_dshots[0], &htim1, TIM_CHANNEL_1, TIM_DMA_ID_CC1, (uint32_t)&((&htim1)->Instance->CCR1));
@@ -202,12 +202,12 @@ char _dshot_init(dshot_port_t port) {
 	return 0;
 }
 
-char dshot_send(dshot_port_t port, uint16_t data) {
+static char dshot_send(dshot_port_t port, uint16_t data) {
 	dshot_write(&g_dshots[port], data);
 	return 0;
 }
 
-char _dshot_ex_init(dshot_ex_port_t port) {
+static char _dshot_ex_init(dshot_ex_port_t port) {
 	switch (port) {
 	case DSHOT_EX_PORT1:
 		dshot_ex_init(&g_dshot_exs[0], &htim1, TIM_CHANNEL_1, TIM_DMA_ID_CC1, (uint32_t)&((&htim1)->Instance->CCR1));
@@ -228,12 +228,12 @@ char _dshot_ex_init(dshot_ex_port_t port) {
 	return 0;
 }
 
-char dshot_ex_send(dshot_ex_port_t port, uint32_t data) {
+static char dshot_ex_send(dshot_ex_port_t port, uint32_t data) {
 	dshot_ex_write(&g_dshot_exs[port], data);
 	return 0;
 }
 
-void handle_db_msg(uart_rx_t *msg) {
+static void handle_db_msg(uart_rx_t *msg) {
     if ((msg->header[0] == 'd' && msg->header[1] == 'b')) { // DB message
     	platform_receive_internal_message(msg->buffer, msg->payload_size);
     }
@@ -321,6 +321,46 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 	}
 }
 
+#define MIN_RC_IN_CAP 1000
+#define AVR_RC_IN_CAP 1500
+#define MAX_RC_IN_CAP 2000
+#define RANGE_RC_IN_CAP (MAX_RC_IN_CAP - MIN_RC_IN_CAP)
+#define SIGNIFICANT_CHANGE 20
+#define MIN_THROTTLE ((int)(-RANGE_RC_IN_CAP/2)+SIGNIFICANT_CHANGE)
+#define MIN_YAW ((int)(-RANGE_RC_IN_CAP/2)+SIGNIFICANT_CHANGE)
+#define MIN_PITCH ((int)(-RANGE_RC_IN_CAP/2)+SIGNIFICANT_CHANGE)
+#define MAX_ROLL ((int)(RANGE_RC_IN_CAP/2)-SIGNIFICANT_CHANGE)
+
+static int g_rc_params[16];
+static int g_rc_param_idx = 0;
+static int cap_value_prev = 0;
+
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Instance == TIM16) {
+		switch (htim->Channel) {
+		case HAL_TIM_ACTIVE_CHANNEL_1:
+			int cap_value = HAL_TIM_ReadCapturedValue(&htim16, TIM_CHANNEL_1);
+			int value = cap_value - cap_value_prev;
+			cap_value_prev = cap_value;
+
+			if (value < 0) value += 65536;
+
+			if (g_rc_param_idx < 17) {
+				g_rc_params[g_rc_param_idx] = value;
+				g_rc_param_idx += 1;
+			}
+
+			if (value > MAX_RC_IN_CAP + MIN_RC_IN_CAP) {
+				g_rc_param_idx = 0;
+				platform_receive_external_message((uint8_t*)g_rc_params, 8*sizeof(int));
+			}
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -366,6 +406,7 @@ int main(void)
   MX_I2C4_Init();
   MX_TIM13_Init();
   MX_TIM14_Init();
+  MX_TIM16_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_Delay(100);
@@ -392,6 +433,9 @@ int main(void)
   // Start UART communication
   HAL_UART_Receive_DMA(&huart1, &g_uart_rx1.byte, 1);
   HAL_UART_Receive_DMA(&huart3, &g_uart_rx2.byte, 1);
+
+  // PPM input capture
+  HAL_TIM_IC_Start_IT(&htim16, TIM_CHANNEL_1);
 
   // Start timers
   HAL_TIM_Base_Start_IT(&htim6);
@@ -881,6 +925,52 @@ static void MX_TIM14_Init(void)
 }
 
 /**
+  * @brief TIM16 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM16_Init(void)
+{
+
+  /* USER CODE BEGIN TIM16_Init 0 */
+
+  /* USER CODE END TIM16_Init 0 */
+
+  TIM_IC_InitTypeDef sConfigIC = {0};
+
+  /* USER CODE BEGIN TIM16_Init 1 */
+
+  /* USER CODE END TIM16_Init 1 */
+  htim16.Instance = TIM16;
+  htim16.Init.Prescaler = 239;
+  htim16.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim16.Init.Period = 65535;
+  htim16.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim16.Init.RepetitionCounter = 0;
+  htim16.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_IC_Init(&htim16) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_RISING;
+  sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
+  sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
+  sConfigIC.ICFilter = 0;
+  if (HAL_TIM_IC_ConfigChannel(&htim16, &sConfigIC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM16_Init 2 */
+
+  /* USER CODE END TIM16_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -1107,14 +1197,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PPM_input_capture_Pin */
-  GPIO_InitStruct.Pin = PPM_input_capture_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  GPIO_InitStruct.Alternate = GPIO_AF1_TIM16;
-  HAL_GPIO_Init(PPM_input_capture_GPIO_Port, &GPIO_InitStruct);
 
   /*AnalogSwitch Config */
   HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PC2, SYSCFG_SWITCH_PC2_CLOSE);

@@ -7,7 +7,9 @@
 static void on_message_received(uint8_t *data, size_t size) {
 	//platform_toggle_led(0);
     if (data[0] == 0x01) { // Orientation control
-        publish(COMMAND_SET_TARGET_ORIENTATION, &data[4], 12);
+    	if (data[1] == 0x02) { // Set target
+			publish(COMMAND_SET_TARGET_ORIENTATION, &data[4], 12);
+		}
     }
 }
 
