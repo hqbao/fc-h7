@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include "icm42688p.h"
 
-#define CALIBRATION_FREQ 4000 // SCHEDULER_4KHZ
+#define CALIBRATION_FREQ 2000 // 2 seconds
 #define IMU_MOTION 100
 
 typedef enum {
@@ -23,16 +23,16 @@ static imu_mode_t g_imu_mode = init;
 
 static void _i2c_write_read(uint8_t address, uint8_t *input, uint16_t input_size,
 		uint8_t* output, uint16_t output_size, uint32_t timeout) {
-	platform_i2c_write_read(I2C_PORT2, address, input, input_size, output, output_size, timeout);
+	platform_i2c_write_read(I2C_PORT1, address, input, input_size, output, output_size, timeout);
 }
 
 static void _i2c_write_read_dma(uint8_t address, uint8_t *input, uint16_t input_size,
 		uint8_t* output, uint16_t output_size) {
-	platform_i2c_write_read_dma(I2C_PORT2, address, input, input_size, output, output_size);
+	platform_i2c_write_read_dma(I2C_PORT1, address, input, input_size, output, output_size);
 }
 
 static void _i2c_write(uint8_t address, uint8_t *data, uint16_t size) {
-	platform_i2c_write(I2C_PORT2, address, data, size);
+	platform_i2c_write(I2C_PORT1, address, data, size);
 }
 
 static void _icm42688p_init(uint8_t Ascale, uint8_t Gscale, uint8_t AODR, uint8_t GODR,
@@ -188,9 +188,6 @@ static void imu_calibrate(uint8_t *data, size_t size) {
 
 void imu_setup(void) {
 	imu_init();
-	subscribe(SCHEDULER_4KHZ, imu_loop);
+	subscribe(SCHEDULER_2KHZ, imu_loop);
 	subscribe(COMMAND_CALIBRATE_IMU, imu_calibrate);
-
-	// Try to calibrate once first
-	publish(COMMAND_CALIBRATE_IMU, NULL, 0);
 }

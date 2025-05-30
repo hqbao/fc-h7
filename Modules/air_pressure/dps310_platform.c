@@ -3,11 +3,11 @@
 #include <platform.h>
 
 char _i2c_read(uint16_t address, uint8_t *data, uint16_t size) {
-	return paltform_i2c_read(I2C_PORT3, address, data, size);
+	return platform_i2c_read(I2C_PORT3, address, data, size);
 }
 
 char _i2c_write(uint16_t address, uint8_t *data, uint16_t size) {
-	return paltform_i2c_write(I2C_PORT3, address, data, size);
+	return platform_i2c_write(I2C_PORT3, address, data, size);
 }
 
 void dps310_i2c_delay_ms(uint32_t delay) {

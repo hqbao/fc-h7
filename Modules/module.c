@@ -5,10 +5,10 @@
 #include <test/test.h>
 
 void platform_setup(void) {
-//	imu_setup();
-//	attitude_fusion_setup();
-//	air_pressure_setup();
-//	attitude_control_setup();
+	imu_setup();
+	attitude_fusion_setup();
+	air_pressure_setup();
+	attitude_control_setup();
 	remote_control_setup();
 //	test_setup();
 }

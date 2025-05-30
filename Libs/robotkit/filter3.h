@@ -28,6 +28,8 @@ typedef struct {
     // Kalman gain
     matrix_t K; // 4x3
 
+    char no_correction;
+
     vector3d_t true_norm_accel;
     vector3d_t pred_norm_accel;
     vector3d_t true_euler_angle;

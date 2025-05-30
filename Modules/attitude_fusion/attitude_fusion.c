@@ -7,7 +7,7 @@
 
 #define MAX_IMU_ACCEL 16384
 #define SSF_GYRO (32.8)
-#define IMU_FREQ 1000
+#define IMU_FREQ 2000
 
 static int16_t g_imu_gyro[3] = {0, 0, 0};
 static int16_t g_imu_accel[3] = {0, 0, MAX_IMU_ACCEL};
@@ -41,6 +41,7 @@ static void init(void) {
 	float gyro_noise = 0.000087; // rad/s
 	float accel_noise = 10.0; // m/s^2
 	filter3_init(&g_f3, gyro_noise, accel_noise);
+	//g_f3.no_correction = 1;
 }
 
 void attitude_fusion_setup(void) {
