@@ -69,6 +69,7 @@ DMA_HandleTypeDef hdma_tim1_ch4;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart1_rx;
+DMA_HandleTypeDef hdma_usart3_rx;
 
 /* USER CODE BEGIN PV */
 
@@ -109,7 +110,7 @@ typedef struct {
 } uart_rx_t;
 
 static I2C_HandleTypeDef* i2c_ports[3] = {&hi2c1, &hi2c3, &hi2c4};
-static UART_HandleTypeDef* uart_ports[1] = {&huart1};
+static UART_HandleTypeDef* uart_ports[2] = {&huart1, &huart3};
 static TIM_HandleTypeDef* g_pwm_timers[4] = {&htim1, &htim1, &htim1, &htim1};
 static uint32_t g_pwm_timer_channels[4] = {TIM_CHANNEL_1, TIM_CHANNEL_2, TIM_CHANNEL_3, TIM_CHANNEL_4};
 static TIM_TypeDef *g_pwm_time_bases[4] = {TIM1, TIM1, TIM1, TIM1};
@@ -283,7 +284,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 		}
 	}
 
-	if (huart->Instance == USART2) {
+	if (huart->Instance == USART3) {
 		if (g_uart_rx2.stage == 5) {
 			g_uart_rx2.buffer[g_uart_rx2.buffer_idx] = g_uart_rx2.byte;
 			g_uart_rx2.buffer_idx++;
@@ -357,32 +358,32 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 			if (value > MAX_RC_IN_CAP + MIN_RC_IN_CAP) {
 				g_rc_param_idx = 0;
 
-				float roll 	= g_rc_params[3] - 1500;
-				float pitch = g_rc_params[2] - 1500;
-				float yaw 	= g_rc_params[0] - 1500;
-				float alt 	= g_rc_params[1] - 1500;
+				int roll 	= g_rc_params[3] - 1500;
+				int pitch = g_rc_params[2] - 1500;
+				int yaw 	= g_rc_params[0] - 1500;
+				int alt 	= g_rc_params[1] - 1500;
 				uint8_t state = g_rc_params[4] < 1250 ? 0 : (g_rc_params[4] > 1750 ? 2 : 1);
 				uint8_t mode = g_rc_params[5] < 1250 ? 0 : (g_rc_params[5] > 1750 ? 2 : 1);
 
-				if (roll <= -10) roll = (roll + 10) / 10;
-				else if (roll >= 10) roll = (roll - 10) / 10;
+				if (roll <= -10) roll = roll + 10;
+				else if (roll >= 10) roll = roll - 10;
 				else roll = 0;
 
-				if (pitch <= -10) pitch = (pitch + 10) / 10;
-				else if (pitch >= 10) pitch = (pitch - 10) / 10;
+				if (pitch <= -10) pitch = pitch + 10;
+				else if (pitch >= 10) pitch = pitch - 10;
 				else pitch = 0;
 
-				if (yaw <= -10) yaw = (yaw + 10) / 10;
-				else if (yaw >= 10) yaw = (yaw - 10) / 10;
+				if (yaw <= -10) yaw = yaw + 10;
+				else if (yaw >= 10) yaw = yaw - 10;
 				else yaw = 0;
 
-				if (alt <= -10) alt = (alt + 10) / 10;
-				else if (alt >= 10) alt = (alt - 10) / 10;
+				if (alt <= -10) alt = alt + 10;
+				else if (alt >= 10) alt = alt - 10;
 				else alt = 0;
 
-				memcpy(&g_rc_db_msg_payload[4], (uint8_t*)&roll, sizeof(float));
-				memcpy(&g_rc_db_msg_payload[8], (uint8_t*)&pitch, sizeof(float));
-				memcpy(&g_rc_db_msg_payload[12], (uint8_t*)&yaw, sizeof(float));
+				memcpy(&g_rc_db_msg_payload[4], (uint8_t*)&roll, sizeof(int));
+				memcpy(&g_rc_db_msg_payload[8], (uint8_t*)&pitch, sizeof(int));
+				memcpy(&g_rc_db_msg_payload[12], (uint8_t*)&yaw, sizeof(int));
 				memcpy(&g_rc_db_msg_payload[16], (uint8_t*)&alt, sizeof(int));
 				g_rc_db_msg_payload[20] = state;
 				g_rc_db_msg_payload[21] = mode;
@@ -1114,6 +1115,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+  /* DMA1_Stream1_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
   /* DMA1_Stream2_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
