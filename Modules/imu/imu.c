@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include "icm42688p.h"
 
-#define CALIBRATION_FREQ 2000 // 2 seconds
-#define IMU_MOTION 100
+#define CALIBRATION_FREQ 16000 // 2 seconds
+#define IMU_MOTION 200
 
 typedef enum {
 	init = 0,
@@ -36,74 +36,79 @@ static void _i2c_write(uint8_t address, uint8_t *data, uint16_t size) {
 }
 
 static void _icm42688p_init(uint8_t Ascale, uint8_t Gscale, uint8_t AODR, uint8_t GODR,
-		uint8_t aMode, uint8_t gMode, bool CLKIN) {
+                           uint8_t aMode, uint8_t gMode, bool CLKIN) {
+    // Ensure register bank 0 is selected
+    g_imu_i2c_buffer[0] = ICM42688_REG_BANK_SEL;
+    g_imu_i2c_buffer[1] = 0x00;
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-	g_imu_i2c_buffer[0] = ICM42688_INT_CONFIG1;
-	g_imu_i2c_buffer[1] = 0x00;
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // select register bank 0
+    // Verify WHO_AM_I (optional but recommended)
+    g_imu_i2c_buffer[0] = ICM42688_WHO_AM_I;
+    _i2c_write_read(ICM42688_ADDRESS, g_imu_i2c_buffer, 1, &g_imu_i2c_buffer[1], 1, 1000);
 
-	g_imu_i2c_buffer[0] = ICM42688_WHO_AM_I;
-	_i2c_write_read(ICM42688_ADDRESS, g_imu_i2c_buffer, 1, &g_imu_i2c_buffer[1], 1, 1000);
+    // Set power modes (gyro in low-noise mode, accel off if not needed)
+    g_imu_i2c_buffer[0] = ICM42688_PWR_MGMT0;
+    g_imu_i2c_buffer[1] = (gMode << 2) | aMode;  // gMode = 0x03 (LN mode), aMode = 0x00 (off)
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
+    platform_delay(1);
 
-	g_imu_i2c_buffer[0] = ICM42688_PWR_MGMT0;
-	g_imu_i2c_buffer[1] = gMode << 2 | aMode;
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // set accel and gyro modes
-	platform_delay(1);
+    // Configure accelerometer (if used, else skip)
+    if (aMode != 0x00) {
+        g_imu_i2c_buffer[0] = ICM42688_ACCEL_CONFIG0;
+        g_imu_i2c_buffer[1] = (Ascale << 5) | AODR;
+        _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
+    }
 
-	g_imu_i2c_buffer[0] = ICM42688_ACCEL_CONFIG0;
-	g_imu_i2c_buffer[1] = Ascale << 5 | AODR;
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // set accel ODR and FS
+    // Configure gyro: 8 kHz ODR + desired scale (e.g., 2000dps)
+    g_imu_i2c_buffer[0] = ICM42688_GYRO_CONFIG0;
+    g_imu_i2c_buffer[1] = (Gscale << 5) | GODR;  // GODR = 0x08 (8 kHz)
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-	g_imu_i2c_buffer[0] = ICM42688_GYRO_CONFIG0;
-	g_imu_i2c_buffer[1] = Gscale << 5 | GODR;
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // set gyro ODR and FS
+    // Set gyro bandwidth to ODR/2 (4 kHz) for minimal filtering
+    g_imu_i2c_buffer[0] = ICM42688_GYRO_ACCEL_CONFIG0;
+    g_imu_i2c_buffer[1] = 0x00;  // Gyro BW = 000 (ODR/2), Accel BW = 000 (if accel is off)
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-	g_imu_i2c_buffer[0] = ICM42688_GYRO_ACCEL_CONFIG0;
-	g_imu_i2c_buffer[1] = 0x44;
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // set gyro and accel bandwidth to ODR/10
+    // Enable FIFO for gyro data (critical for 8 kHz streaming)
+    g_imu_i2c_buffer[0] = ICM42688_FIFO_CONFIG1;
+    g_imu_i2c_buffer[1] = 0x03;  // FIFO mode + gyro data stored
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-	// interrupt handling
-	g_imu_i2c_buffer[0] = ICM42688_INT_CONFIG;
-	g_imu_i2c_buffer[1] = 0x18 | 0x03;
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // push-pull, pulsed, active HIGH interrupts
+    g_imu_i2c_buffer[0] = ICM42688_TMST_CONFIG;
+    g_imu_i2c_buffer[1] = 0x01; // Enable temp compensation
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-	g_imu_i2c_buffer[0] = ICM42688_INT_CONFIG1;
-	_i2c_write_read(ICM42688_ADDRESS, g_imu_i2c_buffer, 1, &g_imu_i2c_buffer[1], 1, 1000);     // clear bit 4 to allow async interrupt reset (required for proper interrupt operation)
+    // Configure interrupts (data-ready on INT1)
+    g_imu_i2c_buffer[0] = ICM42688_INT_CONFIG;
+    g_imu_i2c_buffer[1] = 0x18 | 0x03;  // Push-pull, pulsed, active HIGH
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-	g_imu_i2c_buffer[0] = ICM42688_INT_CONFIG1;
-	g_imu_i2c_buffer[1] = g_imu_i2c_buffer[1] & ~(0x10);
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // clear bit 4 to allow async interrupt reset (required for proper interrupt operation)
+    g_imu_i2c_buffer[0] = ICM42688_INT_SOURCE0;
+    g_imu_i2c_buffer[1] = 0x08;  // Data-ready interrupt to INT1
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-	g_imu_i2c_buffer[0] = ICM42688_INT_SOURCE0;
-	g_imu_i2c_buffer[1] = 0x08;
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // data ready interrupt routed to INT1
+    // Optional: External clock (if CLKIN=true)
+    if (CLKIN) {
+        g_imu_i2c_buffer[0] = ICM42688_INTF_CONFIG1;
+        g_imu_i2c_buffer[1] = 0x95;  // Enable RTC
+        _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-	// Use external clock source
-	if (CLKIN) {
-		g_imu_i2c_buffer[0] = ICM42688_REG_BANK_SEL;
-		g_imu_i2c_buffer[1] = 0x00;
-		_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // select register bank 0
+        g_imu_i2c_buffer[0] = ICM42688_REG_BANK_SEL;
+        g_imu_i2c_buffer[1] = 0x01;  // Bank 1
+        _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-		g_imu_i2c_buffer[0] = ICM42688_INTF_CONFIG1;
-		g_imu_i2c_buffer[1] = 0x95;
-		_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // enable RTC
+        g_imu_i2c_buffer[0] = ICM42688_INTF_CONFIG5;
+        g_imu_i2c_buffer[1] = 0x04;  // Use CLKIN
+        _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
-		g_imu_i2c_buffer[0] = ICM42688_REG_BANK_SEL;
-		g_imu_i2c_buffer[1] = 0x01;
-		_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // select register bank 1
+        // Return to bank 0
+        g_imu_i2c_buffer[0] = ICM42688_REG_BANK_SEL;
+        g_imu_i2c_buffer[1] = 0x00;
+        _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
+    }
 
-		g_imu_i2c_buffer[0] = ICM42688_INTF_CONFIG5;
-		g_imu_i2c_buffer[1] = 0x04;
-		_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // use CLKIN as clock source
-	}
-
-	g_imu_i2c_buffer[0] = ICM42688_REG_BANK_SEL;
-	g_imu_i2c_buffer[1] = 0x00;
-	_i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2); // select register bank 0
-
-	// For next read
-	g_imu_i2c_buffer[0] = ICM42688_TEMP_DATA1;
-	g_imu_i2c_buffer[1] = 0x00;
+    // Prepare for reading (temperature register as placeholder)
+    g_imu_i2c_buffer[0] = ICM42688_TEMP_DATA1;
 }
 
 static void publish_data(void) {
@@ -143,7 +148,7 @@ static void calibrate(void) {
 }
 
 static void imu_init(void) {
-	_icm42688p_init(AFS_2G, GFS_1000DPS, AODR_500Hz, GODR_32kHz, aMode_LN, gMode_LN, 0);
+	_icm42688p_init(AFS_2G, GFS_2000DPS, GODR_500Hz, GODR_8kHz, aMode_LN, gMode_LN, 0);
 }
 
 static void imu_loop(uint8_t *data, size_t size) {
@@ -188,6 +193,6 @@ static void imu_calibrate(uint8_t *data, size_t size) {
 
 void imu_setup(void) {
 	imu_init();
-	subscribe(SCHEDULER_2KHZ, imu_loop);
+	subscribe(SCHEDULER_8KHZ, imu_loop);
 	subscribe(COMMAND_CALIBRATE_IMU, imu_calibrate);
 }

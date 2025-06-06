@@ -108,6 +108,7 @@ void platform_scheduler_100hz(void);
 void platform_scheduler_1khz(void);
 void platform_scheduler_2khz(void);
 void platform_scheduler_4khz(void);
+void platform_scheduler_8khz(void);
 
 void platform_receive_internal_message(uint8_t *data, uint16_t size);
 void platform_receive_external_message(uint8_t *data, uint16_t size);

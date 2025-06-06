@@ -337,6 +337,20 @@ void TIM8_UP_TIM13_IRQHandler(void)
 
 	platform_scheduler_1khz();
 
+	static int counter_for_100hz = 0;
+	if (counter_for_100hz >= 10) {
+		counter_for_100hz = 0;
+		platform_scheduler_100hz();
+	}
+	counter_for_100hz++;
+
+	static int counter_for_25hz = 0;
+	if (counter_for_25hz >= 40) {
+		counter_for_25hz = 0;
+		platform_scheduler_25hz();
+	}
+	counter_for_25hz++;
+
   /* USER CODE END TIM8_UP_TIM13_IRQn 0 */
   HAL_TIM_IRQHandler(&htim13);
   /* USER CODE BEGIN TIM8_UP_TIM13_IRQn 1 */
@@ -351,13 +365,7 @@ void TIM8_TRG_COM_TIM14_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM8_TRG_COM_TIM14_IRQn 0 */
 
-	platform_scheduler_100hz();
-	static int counter_for_25hz = 0;
-	if (counter_for_25hz >= 4) {
-		counter_for_25hz = 0;
-		platform_scheduler_25hz();
-	}
-	counter_for_25hz++;
+	platform_scheduler_8khz();
 
   /* USER CODE END TIM8_TRG_COM_TIM14_IRQn 0 */
   HAL_TIM_IRQHandler(&htim14);
