@@ -11,10 +11,11 @@
 typedef enum {
 	INIT = 0,
 	READY,
+	TAKE_OFF,
+	FLYING,
 } state_t;
 
 static vector3d_t g_euler_angle;
-static vector3d_t g_attitude;
 static float g_air_pressure_alt = 0;
 
 static float g_ctl_roll = 0;
@@ -26,14 +27,10 @@ static float g_ctl_mode = 0;
 
 static int g_pwm_duty[4] = {100, 100, 100, 100};
 
-static state_t g_state;
+static state_t g_state = INIT;
 
 static void attitude_angle_update(uint8_t *data, size_t size) {
 	g_euler_angle = *(vector3d_t*)data;
-}
-
-static void attitude_vector_update(uint8_t *data, size_t size) {
-	g_attitude = *(vector3d_t*)data;
 }
 
 static void air_pressure_update(uint8_t *data, size_t size) {
@@ -63,12 +60,18 @@ static void attitude_control_init(void) {
 
 static void attitude_control_loop(uint8_t *data, size_t size) {
 	if (g_state == INIT) {
+		platform_pwm_send(PWM_PORT1, 0);
+		platform_pwm_send(PWM_PORT2, 0);
+		platform_pwm_send(PWM_PORT3, 0);
+		platform_pwm_send(PWM_PORT4, 0);
+	}
+	else if (g_state == READY) {
 		platform_pwm_send(PWM_PORT1, INIT_SPEED);
 		platform_pwm_send(PWM_PORT2, INIT_SPEED);
 		platform_pwm_send(PWM_PORT3, INIT_SPEED);
 		platform_pwm_send(PWM_PORT4, INIT_SPEED);
 	}
-	else if (g_state == READY) {
+	else if (g_state == TAKE_OFF) {
 		platform_pwm_send(PWM_PORT1, g_pwm_duty[0]);
 		platform_pwm_send(PWM_PORT2, g_pwm_duty[1]);
 		platform_pwm_send(PWM_PORT3, g_pwm_duty[2]);
@@ -89,7 +92,7 @@ static void attitude_control_loop_slow(uint8_t *data, size_t size) {
 
 	platform_uart_send(UART_PORT1, g_output_msg, buf_idx + 2);
 
-	if (g_state == READY) {
+	if (g_state == INIT) {
 		platform_toggle_led(0);
 	}
 }
@@ -97,7 +100,6 @@ static void attitude_control_loop_slow(uint8_t *data, size_t size) {
 void attitude_control_setup(void) {
 	attitude_control_init();
 	subscribe(NOTIFY_IMU_CALIBRATION_RESULT, on_imu_calibration_result);
-	subscribe(SENSOR_ATTITUDE_VECTOR, attitude_vector_update);
 	subscribe(SENSOR_ATTITUDE_ANGLE, attitude_angle_update);
 	subscribe(SENSOR_AIR_PRESSURE, air_pressure_update);
 	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);

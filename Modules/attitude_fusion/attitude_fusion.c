@@ -6,12 +6,11 @@
 #include <filter1.h>
 
 #define MAX_IMU_ACCEL 16384
-#define SSF_GYRO (16.4)
 #define DEG2RAD 0.01745329251
 #define IMU_FREQ 8000
 
-static int16_t g_imu_gyro[3] = {0, 0, 0};
-static int16_t g_imu_accel[3] = {0, 0, MAX_IMU_ACCEL};
+static float g_imu_gyro[3] = {0, 0, 0};
+static float g_imu_accel[3] = {0, 0, MAX_IMU_ACCEL};
 static filter1_t g_f1;
 
 vector3d_t g_pred_vector = {0, 0, 1};
@@ -19,9 +18,9 @@ vector3d_t g_pred_angle = {0, 0, 1};
 
 static void fusion_update_gyro(void) {
 	float dt = 1.0 / IMU_FREQ;
-	float gx = g_imu_gyro[0] / SSF_GYRO * DEG2RAD * dt;
-	float gy = g_imu_gyro[1] / SSF_GYRO * DEG2RAD * dt;
-	float gz = g_imu_gyro[2] / SSF_GYRO * DEG2RAD * dt;
+	float gx = g_imu_gyro[0] * DEG2RAD * dt;
+	float gy = g_imu_gyro[1] * DEG2RAD * dt;
+	float gz = g_imu_gyro[2] * DEG2RAD * dt;
 	filter1_predict(&g_f1, gx, gy, gz);
 
 	g_pred_vector.x = g_f1.v_pred.y;
@@ -54,13 +53,12 @@ static void accel_update(uint8_t *data, size_t size) {
 
 static void init(void) {
 	filter1_init(&g_f1, 1.0 / IMU_FREQ);
-	g_f1.no_correction = 1;
+	//g_f1.no_correction = 1;
 }
 
 void attitude_fusion_setup(void) {
 	init();
 	subscribe(SENSOR_IMU_GYRO, gyro_update);
 	subscribe(SENSOR_IMU_ACCEL, accel_update);
-	publish(COMMAND_CALIBRATE_IMU, NULL, 0);
 }
 

@@ -6,6 +6,7 @@
 
 #define CALIBRATION_FREQ 16000 // 2 seconds
 #define IMU_MOTION 200
+#define SSF_GYRO (16.4)
 
 typedef enum {
 	init = 0,
@@ -14,7 +15,7 @@ typedef enum {
 } imu_mode_t;
 
 static uint8_t g_imu_i2c_buffer[32] = {0};
-static int16_t g_imu_gyro_accel[6] = {0};
+static float g_imu_gyro_accel[6] = {0};
 static int64_t g_imu_calibration[3] = {0};
 static int16_t g_imu_calibration_check[3] = {0};
 static float g_imu_gyro_offset[3] = {0};
@@ -112,8 +113,11 @@ static void _icm42688p_init(uint8_t Ascale, uint8_t Gscale, uint8_t AODR, uint8_
 }
 
 static void publish_data(void) {
-	publish(SENSOR_IMU_GYRO, (uint8_t*)&g_imu_gyro_accel[3], 6);
-	publish(SENSOR_IMU_ACCEL, (uint8_t*)g_imu_gyro_accel, 6);
+	g_imu_gyro_accel[3] = g_imu_gyro_accel[3] / SSF_GYRO;
+	g_imu_gyro_accel[4] = g_imu_gyro_accel[4] / SSF_GYRO;
+	g_imu_gyro_accel[5] = g_imu_gyro_accel[5] / SSF_GYRO;
+	publish(SENSOR_IMU_GYRO, (uint8_t*)&g_imu_gyro_accel[3], 12);
+	publish(SENSOR_IMU_ACCEL, (uint8_t*)g_imu_gyro_accel, 12);
 }
 
 static void calibrate(void) {
@@ -138,9 +142,9 @@ static void calibrate(void) {
 	}
 
 	if (g_imu_calibration_counter >= CALIBRATION_FREQ) {
-		g_imu_gyro_offset[0] = g_imu_calibration[0] / CALIBRATION_FREQ;
-		g_imu_gyro_offset[1] = g_imu_calibration[1] / CALIBRATION_FREQ;
-		g_imu_gyro_offset[2] = g_imu_calibration[2] / CALIBRATION_FREQ;
+		g_imu_gyro_offset[0] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_calibration[0];
+		g_imu_gyro_offset[1] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_calibration[1];
+		g_imu_gyro_offset[2] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_calibration[2];
 		g_imu_mode = ready;
 		uint8_t result = 1;
 		publish(NOTIFY_IMU_CALIBRATION_RESULT, (uint8_t*)&result, 1);
