@@ -134,6 +134,14 @@ static uint32_t time_ms(void) {
 	return HAL_GetTick();
 }
 
+static char storage_read(uint16_t start, uint16_t size, uint8_t *data) {
+	return 0;
+}
+
+static char storage_write(uint16_t start, uint16_t size, uint8_t *data) {
+	return 0;
+}
+
 static char i2c_write_read_dma(i2c_port_t port, uint8_t address, uint8_t *input, uint16_t input_size,
 		uint8_t *output, uint16_t output_size) {
 	return HAL_I2C_Mem_Read_DMA(i2c_ports[port], address, *(uint16_t*)input, input_size, output, output_size);
@@ -450,6 +458,7 @@ int main(void)
   platform_register_toggle_led(toggle_led);
   platform_register_time_ms(time_ms);
   platform_register_delay(delay);
+  platform_register_storage(storage_read, storage_write);
   platform_register_io_functions(
   		i2c_write_read_dma,
 		i2c_write_read,

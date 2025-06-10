@@ -61,6 +61,9 @@ typedef void (*toggle_led_t)(char led);
 typedef uint32_t (*time_ms_t)(void);
 typedef void (*delay_t)(uint32_t ms);
 
+typedef char (*storage_read_t)(uint16_t start, uint16_t size, uint8_t *data);
+typedef char (*storage_write_t)(uint16_t start, uint16_t size, uint8_t *data);
+
 typedef struct {
 	i2c_write_read_dma_t i2c_write_read_dma;
 	i2c_write_read_t i2c_write_read;
@@ -80,6 +83,8 @@ typedef struct {
 	toggle_led_t toggle_led;
 	time_ms_t time_ms;
 	delay_t delay;
+	storage_read_t storage_read;
+	storage_write_t storage_write;
 } platform_t;
 
 void platform_register_io_functions(
@@ -101,8 +106,11 @@ void platform_register_time_ms(time_ms_t time_ms);
 
 void platform_register_delay(delay_t delay);
 
+void platform_register_storage(storage_read_t storage_read, storage_write_t storage_write);
+
 platform_t* get_platform(void);
 
+void platform_scheduler_1hz(void);
 void platform_scheduler_25hz(void);
 void platform_scheduler_100hz(void);
 void platform_scheduler_1khz(void);
@@ -136,5 +144,8 @@ void platform_loop(void);
 #define platform_toggle_led 		get_platform()->toggle_led
 #define platform_time_ms 			get_platform()->time_ms
 #define platform_delay 				get_platform()->delay
+
+#define platform_storage_read		get_platform()->storage_read
+#define platform_storage_write		get_platform()->storage_write
 
 #endif
