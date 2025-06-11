@@ -67,7 +67,7 @@ static void _icm42688p_init(uint8_t Ascale, uint8_t Gscale, uint8_t AODR, uint8_
 
     // Set gyro bandwidth to ODR/2 (4 kHz) for minimal filtering
     g_imu_i2c_buffer[0] = ICM42688_GYRO_ACCEL_CONFIG0;
-    g_imu_i2c_buffer[1] = 0x04;  // Gyro BW = 000 (ODR/2), Accel BW = 000 (if accel is off)
+    g_imu_i2c_buffer[1] = 0x07;  // Gyro BW = 000 (ODR/2), Accel BW = 111 (ODR/320)
     _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
 
     // Enable FIFO for gyro data (critical for 8 kHz streaming)
@@ -152,7 +152,7 @@ static void calibrate(void) {
 }
 
 static void imu_init(void) {
-	_icm42688p_init(AFS_2G, GFS_2000DPS, GODR_500Hz, GODR_8kHz, aMode_LN, gMode_LN, 0);
+	_icm42688p_init(AFS_2G, GFS_2000DPS, GODR_25Hz, GODR_8kHz, aMode_LN, gMode_LN, 0);
 }
 
 static void imu_loop(uint8_t *data, size_t size) {
