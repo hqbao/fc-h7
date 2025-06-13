@@ -108,6 +108,20 @@ static void _icm42688p_init(uint8_t Ascale, uint8_t Gscale, uint8_t AODR, uint8_
         _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
     }
 
+    // Bank 2
+    g_imu_i2c_buffer[0] = ICM42688_REG_BANK_SEL;
+    g_imu_i2c_buffer[1] = 0x02;
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
+
+    g_imu_i2c_buffer[0] = ICM42688_GYRO_CONFIG_STATIC2;
+    g_imu_i2c_buffer[1] = 0x00; // Disable AA filter
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
+
+    // Return to Bank 0
+    g_imu_i2c_buffer[0] = ICM42688_REG_BANK_SEL;
+    g_imu_i2c_buffer[1] = 0x00;
+    _i2c_write(ICM42688_ADDRESS, g_imu_i2c_buffer, 2);
+
     // Prepare for reading (temperature register as placeholder)
     g_imu_i2c_buffer[0] = ICM42688_TEMP_DATA1;
 }
@@ -116,8 +130,8 @@ static void publish_data(void) {
 	g_imu_gyro_accel[3] = g_imu_gyro_accel[3] / SSF_GYRO;
 	g_imu_gyro_accel[4] = g_imu_gyro_accel[4] / SSF_GYRO;
 	g_imu_gyro_accel[5] = g_imu_gyro_accel[5] / SSF_GYRO;
-	publish(SENSOR_IMU_GYRO, (uint8_t*)&g_imu_gyro_accel[3], 12);
-	publish(SENSOR_IMU_ACCEL, (uint8_t*)g_imu_gyro_accel, 12);
+	publish(SENSOR_IMU_GYRO_UPDATE, (uint8_t*)&g_imu_gyro_accel[3], 12);
+	publish(SENSOR_IMU_ACCEL_UPDATE, (uint8_t*)g_imu_gyro_accel, 12);
 }
 
 static void calibrate(void) {
@@ -137,7 +151,7 @@ static void calibrate(void) {
 	if (failed == 1) {
 		g_imu_mode = init;
 		uint8_t result = 0;
-		publish(NOTIFY_IMU_CALIBRATION_RESULT, (uint8_t*)&result, 1);
+		publish(SENSOR_IMU_GYRO_CALIBRATION_UPDATE, (uint8_t*)&result, 1);
 		return;
 	}
 
@@ -147,7 +161,7 @@ static void calibrate(void) {
 		g_imu_gyro_offset[2] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_calibration[2];
 		g_imu_mode = ready;
 		uint8_t result = 1;
-		publish(NOTIFY_IMU_CALIBRATION_RESULT, (uint8_t*)&result, 1);
+		publish(SENSOR_IMU_GYRO_CALIBRATION_UPDATE, (uint8_t*)&result, 1);
 	}
 }
 
@@ -198,5 +212,5 @@ static void imu_calibrate(uint8_t *data, size_t size) {
 void imu_setup(void) {
 	imu_init();
 	subscribe(SCHEDULER_8KHZ, imu_loop);
-	subscribe(COMMAND_CALIBRATE_IMU, imu_calibrate);
+	subscribe(SENSOR_IMU_CALIBRATE_GYRO, imu_calibrate);
 }

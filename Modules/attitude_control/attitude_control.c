@@ -16,7 +16,7 @@ typedef enum {
 	FLYING,
 } state_t;
 
-static vector3d_t g_euler_angle;
+static vector3d_t g_euler_angle = {0, 0, 90};
 static float g_air_pressure_alt = 0;
 
 static float g_ctl_roll = 0;
@@ -47,7 +47,7 @@ static void air_pressure_update(uint8_t *data, size_t size) {
 
 static void on_imu_calibration_result(uint8_t *data, size_t size) {
 	if (data[0] == 1) g_state = READY;
-	else publish(COMMAND_CALIBRATE_IMU, NULL, 0);
+	else publish(SENSOR_IMU_CALIBRATE_GYRO, NULL, 0);
 }
 
 static void move_in_control_update(uint8_t *data, size_t size) {
@@ -111,13 +111,13 @@ static void attitude_control_loop_25hz(uint8_t *data, size_t size) {
 
 void attitude_control_setup(void) {
 	attitude_control_init();
-	subscribe(NOTIFY_IMU_CALIBRATION_RESULT, on_imu_calibration_result);
+	subscribe(SENSOR_IMU_GYRO_CALIBRATION_UPDATE, on_imu_calibration_result);
 	subscribe(SENSOR_ATTITUDE_ANGLE, attitude_angle_update);
 	subscribe(SENSOR_LINEAR_ACCEL, linear_accel_update);
 	subscribe(SENSOR_AIR_PRESSURE, air_pressure_update);
 	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
 	subscribe(SCHEDULER_1KHZ, attitude_control_loop);
-//	subscribe(SCHEDULER_25HZ, attitude_control_loop_25hz);
+	subscribe(SCHEDULER_25HZ, attitude_control_loop_25hz);
 
-	publish(COMMAND_CALIBRATE_IMU, NULL, 0);
+	publish(SENSOR_IMU_CALIBRATE_GYRO, NULL, 0);
 }

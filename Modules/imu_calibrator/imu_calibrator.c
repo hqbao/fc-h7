@@ -24,7 +24,7 @@ static void imu_calibrator_loop(uint8_t *data, size_t size) {
 
 static void on_imu_calibration_result(uint8_t *data, size_t size) {
 	if (data[0] == 1) g_imu_available = 1;
-	else publish(COMMAND_CALIBRATE_IMU, NULL, 0);
+	else publish(SENSOR_IMU_CALIBRATE_GYRO, NULL, 0);
 }
 
 static void imu_calibrator_loop_25hz(uint8_t *data, size_t size) {
@@ -40,7 +40,7 @@ void imu_calibrator_setup(void) {
 	subscribe(SENSOR_ATTITUDE_VECTOR, attitude_vector_update);
 	subscribe(SCHEDULER_1KHZ, imu_calibrator_loop);
 	subscribe(SCHEDULER_25HZ, imu_calibrator_loop_25hz);
-	subscribe(NOTIFY_IMU_CALIBRATION_RESULT, on_imu_calibration_result);
-	publish(COMMAND_CALIBRATE_IMU, NULL, 0);
+	subscribe(SENSOR_IMU_GYRO_CALIBRATION_UPDATE, on_imu_calibration_result);
+	publish(SENSOR_IMU_CALIBRATE_GYRO, NULL, 0);
 }
 
