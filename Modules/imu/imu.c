@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include "icm42688p.h"
 
-#define CALIBRATION_FREQ 16000 // 2 seconds
-#define IMU_MOTION 200
+#define CALIBRATION_FREQ 8000 // 2 seconds
+#define IMU_MOTION 100
 #define SSF_GYRO (16.4)
 
 typedef enum {
@@ -16,24 +16,24 @@ typedef enum {
 
 static uint8_t g_imu_i2c_buffer[32] = {0};
 static float g_imu_gyro_accel[6] = {0};
-static int64_t g_imu_calibration[3] = {0};
-static int16_t g_imu_calibration_check[3] = {0};
-static float g_imu_gyro_offset[3] = {0};
-static int g_imu_calibration_counter = 0;
+static float g_imu_gyro_offset[6] = {0};
+static int64_t g_imu_gyro_calibration[3] = {0};
+static int16_t g_imu_gyro_calibration_check[3] = {0};
+static int g_imu_gyro_calibration_counter = 0;
 static imu_mode_t g_imu_mode = init;
 
 static void _i2c_write_read(uint8_t address, uint8_t *input, uint16_t input_size,
 		uint8_t* output, uint16_t output_size, uint32_t timeout) {
-	platform_i2c_write_read(I2C_PORT1, address, input, input_size, output, output_size, timeout);
+	platform_i2c_write_read(I2C_PORT2, address, input, input_size, output, output_size, timeout);
 }
 
 static void _i2c_write_read_dma(uint8_t address, uint8_t *input, uint16_t input_size,
 		uint8_t* output, uint16_t output_size) {
-	platform_i2c_write_read_dma(I2C_PORT1, address, input, input_size, output, output_size);
+	platform_i2c_write_read_dma(I2C_PORT2, address, input, input_size, output, output_size);
 }
 
 static void _i2c_write(uint8_t address, uint8_t *data, uint16_t size) {
-	platform_i2c_write(I2C_PORT1, address, data, size);
+	platform_i2c_write(I2C_PORT2, address, data, size);
 }
 
 static void _icm42688p_init(uint8_t Ascale, uint8_t Gscale, uint8_t AODR, uint8_t GODR,
@@ -135,19 +135,19 @@ static void publish_data(void) {
 }
 
 static void calibrate(void) {
-	g_imu_calibration[0] += g_imu_gyro_accel[3];
-	g_imu_calibration[1] += g_imu_gyro_accel[4];
-	g_imu_calibration[2] += g_imu_gyro_accel[5];
-	g_imu_calibration_counter++;
+	g_imu_gyro_calibration[0] += g_imu_gyro_accel[3];
+	g_imu_gyro_calibration[1] += g_imu_gyro_accel[4];
+	g_imu_gyro_calibration[2] += g_imu_gyro_accel[5];
+	g_imu_gyro_calibration_counter++;
 
 	// Check motionless
 	char failed = 0;
-	if (abs(g_imu_gyro_accel[3] - g_imu_calibration_check[0]) > IMU_MOTION) failed = 1;
-	if (abs(g_imu_gyro_accel[4] - g_imu_calibration_check[1]) > IMU_MOTION) failed = 1;
-	if (abs(g_imu_gyro_accel[5] - g_imu_calibration_check[2]) > IMU_MOTION) failed = 1;
-	g_imu_calibration_check[0] = g_imu_gyro_accel[3];
-	g_imu_calibration_check[1] = g_imu_gyro_accel[4];
-	g_imu_calibration_check[2] = g_imu_gyro_accel[5];
+	if (abs(g_imu_gyro_accel[3] - g_imu_gyro_calibration_check[0]) > IMU_MOTION) failed = 1;
+	if (abs(g_imu_gyro_accel[4] - g_imu_gyro_calibration_check[1]) > IMU_MOTION) failed = 1;
+	if (abs(g_imu_gyro_accel[5] - g_imu_gyro_calibration_check[2]) > IMU_MOTION) failed = 1;
+	g_imu_gyro_calibration_check[0] = g_imu_gyro_accel[3];
+	g_imu_gyro_calibration_check[1] = g_imu_gyro_accel[4];
+	g_imu_gyro_calibration_check[2] = g_imu_gyro_accel[5];
 	if (failed == 1) {
 		g_imu_mode = init;
 		uint8_t result = 0;
@@ -155,10 +155,10 @@ static void calibrate(void) {
 		return;
 	}
 
-	if (g_imu_calibration_counter >= CALIBRATION_FREQ) {
-		g_imu_gyro_offset[0] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_calibration[0];
-		g_imu_gyro_offset[1] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_calibration[1];
-		g_imu_gyro_offset[2] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_calibration[2];
+	if (g_imu_gyro_calibration_counter >= CALIBRATION_FREQ) {
+		g_imu_gyro_offset[3] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_gyro_calibration[0];
+		g_imu_gyro_offset[4] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_gyro_calibration[1];
+		g_imu_gyro_offset[5] = (double)(1.0 / CALIBRATION_FREQ) * g_imu_gyro_calibration[2];
 		g_imu_mode = ready;
 		uint8_t result = 1;
 		publish(SENSOR_IMU_GYRO_CALIBRATION_UPDATE, (uint8_t*)&result, 1);
@@ -188,9 +188,12 @@ static void imu_loop(uint8_t *data, size_t size) {
 	g_imu_gyro_accel[5] = gz;
 
 	if (g_imu_mode == ready) {
-		g_imu_gyro_accel[3] -= g_imu_gyro_offset[0];
-		g_imu_gyro_accel[4] -= g_imu_gyro_offset[1];
-		g_imu_gyro_accel[5] -= g_imu_gyro_offset[2];
+		g_imu_gyro_accel[0] -= g_imu_gyro_offset[0];
+		g_imu_gyro_accel[1] -= g_imu_gyro_offset[1];
+		g_imu_gyro_accel[2] -= g_imu_gyro_offset[2];
+		g_imu_gyro_accel[3] -= g_imu_gyro_offset[3];
+		g_imu_gyro_accel[4] -= g_imu_gyro_offset[4];
+		g_imu_gyro_accel[5] -= g_imu_gyro_offset[5];
 		publish_data();
 	}
 	else if (g_imu_mode == calibrating) {
@@ -199,18 +202,18 @@ static void imu_loop(uint8_t *data, size_t size) {
 }
 
 static void imu_calibrate(uint8_t *data, size_t size) {
-	g_imu_calibration_counter = 0;
-	g_imu_calibration[0] = 0;
-	g_imu_calibration[1] = 0;
-	g_imu_calibration[2] = 0;
-	g_imu_calibration_check[0] = g_imu_gyro_accel[3];
-	g_imu_calibration_check[1] = g_imu_gyro_accel[4];
-	g_imu_calibration_check[2] = g_imu_gyro_accel[5];
+	g_imu_gyro_calibration_counter = 0;
+	g_imu_gyro_calibration[0] = 0;
+	g_imu_gyro_calibration[1] = 0;
+	g_imu_gyro_calibration[2] = 0;
+	g_imu_gyro_calibration_check[0] = g_imu_gyro_accel[3];
+	g_imu_gyro_calibration_check[1] = g_imu_gyro_accel[4];
+	g_imu_gyro_calibration_check[2] = g_imu_gyro_accel[5];
 	g_imu_mode = calibrating;
 }
 
 void imu_setup(void) {
 	imu_init();
-	subscribe(SCHEDULER_8KHZ, imu_loop);
+	subscribe(SCHEDULER_4KHZ, imu_loop);
 	subscribe(SENSOR_IMU_CALIBRATE_GYRO, imu_calibrate);
 }
