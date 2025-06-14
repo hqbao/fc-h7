@@ -21,7 +21,6 @@ typedef enum {
 } state_t;
 
 static vector3d_t g_euler_angle = {0, 0, 90};
-static float g_air_pressure_alt = 0;
 
 static float g_ctl_roll = 0;
 static float g_ctl_pitch = 0;
@@ -34,22 +33,11 @@ static float g_ctl_mode_prev = 0;
 
 static int g_output_speed[4] = {0, 0, 0, 0};
 
-static vector3d_t g_linear_veloc = {0, 0, 0};
-
 static state_t g_state = DISARMED;
 static char g_imu_calibrated = 0;
 
 static void attitude_angle_update(uint8_t *data, size_t size) {
 	g_euler_angle = *(vector3d_t*)data;
-}
-
-static void linear_accel_update(uint8_t *data, size_t size) {
-	vector3d_t v = *(vector3d_t*)data;
-	vector3d_add(&g_linear_veloc, &g_linear_veloc, &v);
-}
-
-static void air_pressure_update(uint8_t *data, size_t size) {
-	g_air_pressure_alt = *(float*)data;
 }
 
 static void on_imu_calibration_result(uint8_t *data, size_t size) {
@@ -58,10 +46,10 @@ static void on_imu_calibration_result(uint8_t *data, size_t size) {
 }
 
 static void move_in_control_update(uint8_t *data, size_t size) {
-    g_ctl_roll 	= (float)(*(int*)&data[0]) / 10;
-    g_ctl_pitch	= (float)(*(int*)&data[4]) / 10;
-    g_ctl_yaw 	= (float)(*(int*)&data[8]) / 10;
-    g_ctl_alt 	= (float)(*(int*)&data[12]) / 10;
+    g_ctl_roll 	= (*(float*)&data[0]);
+    g_ctl_pitch	= (*(float*)&data[4]);
+    g_ctl_yaw 	= (*(float*)&data[8]);
+    g_ctl_alt 	= (*(float*)&data[12]);
     g_ctl_state = data[16];
     g_ctl_mode 	= data[17];
 }
@@ -146,12 +134,12 @@ static void attitude_control_loop_25hz(uint8_t *data, size_t size) {
 	static uint8_t g_output_msg[128] = {'d', 'b', 0x00 /* Info */, 0x05 /* Linear velocity */};
 	int buf_idx = 6;
 
-	int linear_veloc_x = (int)g_linear_veloc.x;
-	int linear_veloc_y = (int)g_linear_veloc.y;
-	int linear_veloc_z = (int)g_linear_veloc.z;
-	memcpy(&g_output_msg[buf_idx], &linear_veloc_x, 4); buf_idx += 4;
-	memcpy(&g_output_msg[buf_idx], &linear_veloc_y, 4); buf_idx += 4;
-	memcpy(&g_output_msg[buf_idx], &linear_veloc_z, 4); buf_idx += 4;
+	int x = (int)g_euler_angle.x;
+	int y = (int)g_euler_angle.y;
+	int z = (int)g_euler_angle.z;
+	memcpy(&g_output_msg[buf_idx], &x, 4); buf_idx += 4;
+	memcpy(&g_output_msg[buf_idx], &y, 4); buf_idx += 4;
+	memcpy(&g_output_msg[buf_idx], &z, 4); buf_idx += 4;
 
 	uint16_t payload_size = buf_idx - 6;
 	memcpy(&g_output_msg[4], &payload_size, 2); // 2-byte checksum
@@ -169,8 +157,6 @@ void attitude_control_setup(void) {
 
 	subscribe(SENSOR_IMU_GYRO_CALIBRATION_UPDATE, on_imu_calibration_result);
 	subscribe(SENSOR_ATTITUDE_ANGLE, attitude_angle_update);
-	subscribe(SENSOR_LINEAR_ACCEL, linear_accel_update);
-	subscribe(SENSOR_AIR_PRESSURE, air_pressure_update);
 	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
 	subscribe(SCHEDULER_1KHZ, attitude_control_loop);
 	subscribe(SCHEDULER_100HZ, attitude_control_loop_100hz);
