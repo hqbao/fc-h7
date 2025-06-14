@@ -74,34 +74,9 @@ static void init(void) {
 	//g_f1.no_correction = 1;
 }
 
-static void loop_slow(uint8_t *data, size_t size) {
-	static uint8_t g_output_msg[128] = {'d', 'b', 0x00 /* Info */, 0x05 /* Linear velocity */};
-	int buf_idx = 6;
-
-	int x = (int)(g_f1.v_pred.x * 1000);
-	int y = (int)(g_f1.v_pred.y * 1000);
-	int z = (int)(g_f1.v_pred.z * 1000);
-	int x1 = (int)(g_f1.v_true.x * 1000);
-	int y1 = (int)(g_f1.v_true.y * 1000);
-	int z1 = (int)(g_f1.v_true.z * 1000);
-	memcpy(&g_output_msg[buf_idx], &x, 4); buf_idx += 4;
-	memcpy(&g_output_msg[buf_idx], &y, 4); buf_idx += 4;
-	memcpy(&g_output_msg[buf_idx], &z, 4); buf_idx += 4;
-	memcpy(&g_output_msg[buf_idx], &x1, 4); buf_idx += 4;
-	memcpy(&g_output_msg[buf_idx], &y1, 4); buf_idx += 4;
-	memcpy(&g_output_msg[buf_idx], &z1, 4); buf_idx += 4;
-
-	uint16_t payload_size = buf_idx - 6;
-	memcpy(&g_output_msg[4], &payload_size, 2); // 2-byte checksum
-	memset(&g_output_msg[buf_idx], 0, 2); // 2-byte checksum, no use
-
-	//platform_uart_send(UART_PORT1, g_output_msg, buf_idx + 2);
-}
-
 void attitude_fusion_setup(void) {
 	init();
 	subscribe(SENSOR_IMU_GYRO_UPDATE, gyro_update);
 	subscribe(SENSOR_IMU_ACCEL_UPDATE, accel_update);
-	subscribe(SCHEDULER_25HZ, loop_slow);
 }
 

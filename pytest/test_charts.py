@@ -20,7 +20,7 @@ if g_serial_port is None:
   print('No serial port found')
   exit()
 
-max_win_size = 64
+max_win_size = 128
 g_line = np.linspace(start=0, stop=1, num=max_win_size)
 g_val1 = np.zeros(max_win_size, int)
 g_val2 = np.zeros(max_win_size, int)

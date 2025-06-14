@@ -205,7 +205,7 @@ static char _dshot_init(dshot_port_t port) {
 		dshot_init(&g_dshots[2], &htim1, TIM_CHANNEL_3, TIM_DMA_ID_CC3, (uint32_t)&((&htim1)->Instance->CCR3));
 		break;
 	case DSHOT_PORT4:
-		dshot_init(&g_dshots[4], &htim1, TIM_CHANNEL_4, TIM_DMA_ID_CC4, (uint32_t)&((&htim1)->Instance->CCR4));
+		dshot_init(&g_dshots[3], &htim1, TIM_CHANNEL_4, TIM_DMA_ID_CC4, (uint32_t)&((&htim1)->Instance->CCR4));
 		break;
 	default:
 		break;
@@ -231,7 +231,7 @@ static char _dshot_ex_init(dshot_ex_port_t port) {
 		dshot_ex_init(&g_dshot_exs[2], &htim1, TIM_CHANNEL_3, TIM_DMA_ID_CC3, (uint32_t)&((&htim1)->Instance->CCR3));
 		break;
 	case DSHOT_EX_PORT4:
-		dshot_ex_init(&g_dshot_exs[4], &htim1, TIM_CHANNEL_4, TIM_DMA_ID_CC4, (uint32_t)&((&htim1)->Instance->CCR4));
+		dshot_ex_init(&g_dshot_exs[3], &htim1, TIM_CHANNEL_4, TIM_DMA_ID_CC4, (uint32_t)&((&htim1)->Instance->CCR4));
 		break;
 	default:
 		break;
