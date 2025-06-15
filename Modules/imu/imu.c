@@ -29,7 +29,7 @@ typedef struct {
 	topic_t topic_accel_update;
 } imu_t;
 
-imu_t g_imu1 = {
+static imu_t g_imu1 = {
 		{{0}, I2C_PORT1},
 		{0, 0, 0, 0, 0, 0},
 		{0},
