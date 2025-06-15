@@ -18,7 +18,6 @@ static float g_imu_accel[3] = {0, 0, MAX_IMU_ACCEL};
 static filter1_t g_f1;
 
 vector3d_t g_pred_vector = {0, 0, 1};
-vector3d_t g_pred_angle = {0, 0, 1};
 vector3d_t g_linear_accel = {0, 0, 0};
 
 vector3d_t g_accel_vector = {0, 0, MAX_IMU_ACCEL};
@@ -35,11 +34,6 @@ static void fusion_update_gyro(void) {
 	g_pred_vector.y = g_f1.v_pred.x;
 	g_pred_vector.z = g_f1.v_pred.z;
 	publish(SENSOR_ATTITUDE_VECTOR, (uint8_t*)&g_pred_vector, sizeof(vector3d_t));
-
-	g_pred_angle.x = g_f1.pred_euler_angle.y;
-	g_pred_angle.y = g_f1.pred_euler_angle.x;
-	g_pred_angle.z = g_f1.pred_euler_angle.z;
-	publish(SENSOR_ATTITUDE_ANGLE, (uint8_t*)&g_pred_angle, sizeof(vector3d_t));
 }
 
 static void fusion_update_accel(void) {
@@ -71,7 +65,7 @@ static void accel_update(uint8_t *data, size_t size) {
 static void init(void) {
 	filter1_init(&g_f1, 0.125 / IMU_FREQ);
 	filter1_use_linear_acceleration(&g_f1, MAX_IMU_ACCEL);
-	//g_f1.no_correction = 1;
+	g_f1.no_correction = 1;
 }
 
 void attitude_fusion_setup(void) {
