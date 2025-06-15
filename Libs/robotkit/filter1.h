@@ -12,14 +12,14 @@ typedef struct {
     vector3d_t pred_euler_angle;
     vector3d_t true_euler_angle;
     vector3d_t linear_acceleration;
-    double k;
-    double accel_scale;
+    float k;
+    float accel_scale;
     char no_correction;
 } filter1_t;
 
-void filter1_init(filter1_t *f, double k);
+void filter1_init(filter1_t *f, float k);
 void filter1_use_linear_acceleration(filter1_t *f, int accel_scale);
-void filter1_predict(filter1_t *f, double gx, double gy, double gz);
-void filter1_update(filter1_t *f, double ax, double ay, double az);
+void filter1_predict(filter1_t *f, float gx, float gy, float gz);
+void filter1_update(filter1_t *f, float ax, float ay, float az);
 
 #endif
