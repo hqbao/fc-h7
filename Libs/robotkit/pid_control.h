@@ -7,7 +7,10 @@ typedef struct {
   double value;
   double prev_value;
   double p_value;
+
   double error;
+  double derivative;
+  double integral;
 
   double smooth1;
   double smooth2;

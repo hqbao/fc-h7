@@ -46,7 +46,7 @@ def run_db_reader(in_queue):
           size = int.from_bytes(length, 'little')
           payload = stream.read(size)
           checksum = stream.read(2)
-          print(clazz, ID, size)
+          # print(clazz, ID, size)
           in_queue.put((clazz, ID, payload))
 
 def run_parser():
