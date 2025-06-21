@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include "icm42688p.h"
 
-#define CALIBRATION_FREQ 8000 // 2 seconds
+#define IMU_FREQ 4000
+#define CALIBRATION_FREQ (IMU_FREQ * 2) // 2 seconds
 #define IMU_MOTION 100
 #define SSF_GYRO (16.4)
 
