@@ -72,25 +72,25 @@ static void update_target_attitude(uint8_t *data, size_t size) {
 }
 
 static void pid_setup(void) {
-	pid_control_init(&g_pid_att_roll, PID_FREQ);
+	pid_control_init(&g_pid_att_roll);
 	pid_control_set_p_gain(&g_pid_att_roll, 50);
 	pid_control_set_d_gain(&g_pid_att_roll, 5);
 	pid_control_set_i_gain(&g_pid_att_roll, 1.0, 1.0);
 	pid_control_set_smooth(&g_pid_att_roll, 1.0, 1.0, 1.0);
 
-	pid_control_init(&g_pid_att_pitch, PID_FREQ);
+	pid_control_init(&g_pid_att_pitch);
 	pid_control_set_p_gain(&g_pid_att_pitch, 50);
 	pid_control_set_d_gain(&g_pid_att_pitch, 5);
 	pid_control_set_i_gain(&g_pid_att_pitch, 1.0, 1.0);
 	pid_control_set_smooth(&g_pid_att_pitch, 1.0, 1.0, 1.0);
 
-	pid_control_init(&g_pid_att_yaw, PID_FREQ);
+	pid_control_init(&g_pid_att_yaw);
 	pid_control_set_p_gain(&g_pid_att_yaw, 50);
 	pid_control_set_d_gain(&g_pid_att_yaw, 5);
 	pid_control_set_i_gain(&g_pid_att_yaw, 1.0, 1.0);
 	pid_control_set_smooth(&g_pid_att_yaw, 1.0, 1.0, 1.0);
 
-	pid_control_init(&g_pid_alt, PID_FREQ);
+	pid_control_init(&g_pid_alt);
 	pid_control_set_p_gain(&g_pid_alt, 50);
 	pid_control_set_d_gain(&g_pid_alt, 5);
 	pid_control_set_i_gain(&g_pid_alt, 1.0, 1.0);

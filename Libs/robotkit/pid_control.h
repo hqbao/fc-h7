@@ -2,8 +2,6 @@
 #define PID_CONTROL_H
 
 typedef struct {
-  double pid_freq;
-
   double value;
   double prev_value;
   double p_value;
@@ -35,7 +33,7 @@ typedef struct {
   double output;
 } pid_control_t;
 
-void pid_control_init(pid_control_t *pid_control, double pid_freq);
+void pid_control_init(pid_control_t *pid_control);
 void pid_control_reset(pid_control_t *pid_control, double init_value);
 void pid_control_set_smooth(pid_control_t *pid_control, double smooth1, double smooth2, double smooth3);
 void pid_control_set_p_gain(pid_control_t *pid_control, double p_gain);
@@ -46,6 +44,6 @@ void pid_control_set_i_limit(pid_control_t *pid_control, double abs_value);
 void pid_control_set_d_limit(pid_control_t *pid_control, double abs_value);
 void pid_control_set_o_limit(pid_control_t *pid_control, double abs_value);
 void pid_control_halt_i(pid_control_t *pid_control, char halt_i);
-double pid_control_update(pid_control_t *pid_control, double value, double target);
+double pid_control_update(pid_control_t *pid_control, double value, double target, double dt);
 
 #endif
