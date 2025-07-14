@@ -112,7 +112,7 @@ static void imu1_loop(uint8_t *data, size_t size) {
 
 void imu_setup(void) {
 	icm42688p_init(&g_imu1.imu_sensor,
-			AFS_2G, GFS_2000DPS, GODR_25Hz, GODR_32kHz, aMode_LN, gMode_LN, 0);
+			AFS_2G, GFS_2000DPS, AODR_25Hz, GODR_32kHz, aMode_LN, gMode_LN, 0);
 	subscribe(SCHEDULER_4KHZ, imu1_loop);
 	subscribe(SENSOR_IMU_CALIBRATE_GYRO, imu1_calibrate);
 }
