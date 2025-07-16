@@ -351,6 +351,13 @@ void TIM8_UP_TIM13_IRQHandler(void)
 	}
 	counter_for_25hz++;
 
+	static int counter_for_1hz = 0;
+	if (counter_for_1hz >= 1000) {
+		counter_for_1hz = 0;
+		platform_scheduler_1hz();
+	}
+	counter_for_1hz++;
+
   /* USER CODE END TIM8_UP_TIM13_IRQn 0 */
   HAL_TIM_IRQHandler(&htim13);
   /* USER CODE BEGIN TIM8_UP_TIM13_IRQn 1 */

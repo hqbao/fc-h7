@@ -111,8 +111,13 @@ void platform_register_storage(storage_read_t storage_read, storage_write_t stor
 platform_t* get_platform(void);
 
 void platform_scheduler_1hz(void);
+void platform_scheduler_5hz(void);
+void platform_scheduler_10hz(void);
 void platform_scheduler_25hz(void);
+void platform_scheduler_50hz(void);
 void platform_scheduler_100hz(void);
+void platform_scheduler_250hz(void);
+void platform_scheduler_500hz(void);
 void platform_scheduler_1khz(void);
 void platform_scheduler_2khz(void);
 void platform_scheduler_4khz(void);

@@ -3,7 +3,7 @@
 
 typedef struct {
   double value;
-  double prev_value;
+  double value_prev;
   double p_value;
 
   double error;
@@ -21,7 +21,6 @@ typedef struct {
 
   double p_limit;
   double i_limit;
-  double d_limit;
   double o_limit;
 
   char halt_i;
@@ -41,7 +40,6 @@ void pid_control_set_i_gain(pid_control_t *pid_control, double i_gain, double i_
 void pid_control_set_d_gain(pid_control_t *pid_control, double d_gain);
 void pid_control_set_p_limit(pid_control_t *pid_control, double abs_value);
 void pid_control_set_i_limit(pid_control_t *pid_control, double abs_value);
-void pid_control_set_d_limit(pid_control_t *pid_control, double abs_value);
 void pid_control_set_o_limit(pid_control_t *pid_control, double abs_value);
 void pid_control_halt_i(pid_control_t *pid_control, char halt_i);
 double pid_control_update(pid_control_t *pid_control, double value, double target, double dt);
