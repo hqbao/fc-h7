@@ -13,6 +13,8 @@
 #define ACCEL_OFFSET_Y 0
 #define ACCEL_OFFSET_Z 0
 
+#define LINEAR_ACCEL_REMOVAL_AFTER_X_SECOND 5
+
 static float g_imu_gyro[3] = {0, 0, 0};
 static float g_imu_accel[3] = {0, 0, MAX_IMU_ACCEL};
 static filter1_t g_f1;
@@ -26,12 +28,17 @@ static vector3d_t g_prev = {0, 0, 0};
 
 static int g_seconds = 0;
 
+static double g_angle_state_raw = 0;
+static double g_angle_state = 0;
+
 static void fusion_update_gyro(void) {
 	double dt = 1.0 / IMU_FREQ;
 	double gx = dt * g_imu_gyro[0] * DEG2RAD;
 	double gy = dt * g_imu_gyro[1] * DEG2RAD;
 	double gz = dt * g_imu_gyro[2] * DEG2RAD;
 	filter1_predict(&g_f1, gx, gy, gz);
+
+	g_angle_state_raw += fabs(g_imu_gyro[2]);
 
 	vector3d_sub(&g_derivative, &g_f1.pred_euler_angle, &g_prev);
 	vector3d_scale(&g_derivative, &g_derivative, 1000000);
@@ -49,10 +56,11 @@ static void fusion_update_accel(void) {
 			g_accel_vector.y,
 			g_accel_vector.z);
 
-	g_linear_accel.x = -g_f1.linear_acceleration.y;
-	g_linear_accel.y = -g_f1.linear_acceleration.x;
-	g_linear_accel.z = g_f1.linear_acceleration.z;
+	g_linear_accel.x = -g_f1.v_linear_acc.y;
+	g_linear_accel.y = -g_f1.v_linear_acc.x;
+	g_linear_accel.z = g_f1.v_linear_acc.z;
 	publish(SENSOR_LINEAR_ACCEL, (uint8_t*)&g_linear_accel, sizeof(vector3d_t));
+	publish(MONITOR_DATA, (uint8_t*)&g_f1.linear_accel, sizeof(double));
 }
 
 static void gyro_update(uint8_t *data, size_t size) {
@@ -69,13 +77,18 @@ static void accel_update(uint8_t *data, size_t size) {
 }
 
 static void loop_1hz(uint8_t *data, size_t size) {
-	if (g_seconds < 5) {
-		g_seconds++;
+	if (g_imu_accel[0] != 0) {
+		if (g_seconds < LINEAR_ACCEL_REMOVAL_AFTER_X_SECOND) {
+			g_seconds++;
+		}
+		else if (g_seconds == LINEAR_ACCEL_REMOVAL_AFTER_X_SECOND) {
+			filter1_remove_linear_accel(&g_f1, 100, 3, 7, MAX_IMU_ACCEL);
+			g_seconds++;
+		}
 	}
-	else if (g_seconds == 5) {
-		filter1_remove_linear_accel(&g_f1, 8, 40, MAX_IMU_ACCEL);
-		g_seconds++;
-	}
+
+	g_angle_state = g_angle_state_raw;
+	g_angle_state_raw = 0;
 }
 
 static void init(void) {
