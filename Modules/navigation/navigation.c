@@ -6,6 +6,11 @@
 #include <macro.h>
 
 typedef struct {
+	float state;
+	float mode;
+} rc_state_ctl_t;
+
+typedef struct {
 	float roll;
 	float pitch;
 	float yaw;
@@ -15,6 +20,7 @@ typedef struct {
 static double g_air_pressure_alt = 0;
 static vector3d_t g_optflow = {0, 0, 0};
 static vector3d_t g_linear_veloc = {0, 0, 0};
+static rc_state_ctl_t g_rc_state_ctl;
 static rc_att_ctl_t g_rc_att_ctl;
 
 static void linear_accel_update(uint8_t *data, size_t size) {
@@ -24,6 +30,11 @@ static void linear_accel_update(uint8_t *data, size_t size) {
 
 static void air_pressure_update(uint8_t *data, size_t size) {
 	g_air_pressure_alt = *(float*)data;
+}
+
+static void state_control_update(uint8_t *data, size_t size) {
+	g_rc_state_ctl.state = data[0];
+	g_rc_state_ctl.mode = data[1];
 }
 
 static void move_in_control_update(uint8_t *data, size_t size) {
@@ -42,6 +53,7 @@ static void optflow_sensor_update(uint8_t *data, size_t size) {
 void navigation_setup(void) {
 	subscribe(SENSOR_LINEAR_ACCEL, linear_accel_update);
 	subscribe(SENSOR_AIR_PRESSURE, air_pressure_update);
+	subscribe(COMMAND_SET_STATE, state_control_update);
 	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
 	subscribe(EXTERNAL_SENSOR_OPTFLOW, optflow_sensor_update);
 }

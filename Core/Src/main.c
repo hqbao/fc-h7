@@ -346,7 +346,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 static int g_rc_params[16];
 static int g_rc_param_idx = 0;
 static int cap_value_prev = 0;
-static uint8_t g_rc_db_msg_payload[22] = {0x01 /* Command */, 0x02 /* Set point */, 0, 0x0f};
+static uint8_t g_rc_db_msg_payload[22] = {0x02 /* Command */, 0x00 /* Set point */, 0, 0x0f};
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 	if (htim->Instance == TIM16) {

@@ -6,7 +6,8 @@
 #include <remote_control/remote_control.h>
 #include <imu_calibrator/imu_calibrator.h>
 #include <navigation/navigation.h>
-#include <communication/communication.h>
+#include <optflow/optflow.h>
+#include <state_detector/state_detector.h>
 #include <logger/logger.h>
 #include <test/test.h>
 
@@ -18,7 +19,8 @@ void platform_setup(void) {
 	attitude_control_setup();
 	remote_control_setup();
 	navigation_setup();
-	communication_setup();
+	optflow_setup();
+	state_detector_setup();
 	//logger_setup();
 	//test_setup();
 	//imu_calibrator_setup();

@@ -7,11 +7,18 @@
 
 #define MAX_IMU_ACCEL 16384
 #define DEG2RAD 0.01745329251
+#define RAD2DEG 57.2957795131
 #define IMU_FREQ 4000
 
 #define ACCEL_OFFSET_X 0
 #define ACCEL_OFFSET_Y 0
 #define ACCEL_OFFSET_Z 0
+
+typedef struct {
+	float roll;
+	float pitch;
+	float yaw;
+} angle3d_t;
 
 static filter1_t g_f11;
 static vector3d_t g_imu1_gyro = {0, 0, 0};
@@ -24,6 +31,8 @@ static vector3d_t g_imu2_accel = {0, 0, MAX_IMU_ACCEL};
 static filter1_t g_f13;
 static vector3d_t g_imu3_gyro = {0, 0, 0};
 static vector3d_t g_imu3_accel = {0, 0, MAX_IMU_ACCEL};
+
+static angle3d_t g_angular_state = {0, 0, 0};
 
 static void gyro_update(uint8_t *data, size_t size) {
 	float gx = -(*(float*)&data[0]);
@@ -49,7 +58,11 @@ static void gyro_update(uint8_t *data, size_t size) {
 			dt * g_imu3_gyro.y * DEG2RAD,
 			dt * g_imu3_gyro.z * DEG2RAD);
 
-	publish(SENSOR_ATTITUDE_VECTOR, (uint8_t*)&g_f11.v_pred, sizeof(vector3d_t));
+	g_angular_state.roll = asin(g_f11.v_pred.y) * RAD2DEG;
+	g_angular_state.pitch = asin(g_f11.v_pred.x) * RAD2DEG;
+	g_angular_state.yaw += g_imu1_gyro.z * dt;
+
+	publish(SENSOR_ATTITUDE_ANGLE, (uint8_t*)&g_angular_state, sizeof(angle3d_t));
 }
 
 static void accel_update(uint8_t *data, size_t size) {

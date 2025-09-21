@@ -10,8 +10,8 @@ static float g_rc_move_in[4] = {0};
 static uint8_t g_rc_state[2] = {0};
 
 static void on_internal_message(uint8_t *data, size_t size) {
-	if (data[0] == 0x01) { // Command
-		if (data[1] == 0x02) { // Set target
+	if (data[0] == 0x02) { // Command
+		if (data[1] == 0x00) { // Move in
 			memcpy(g_rc_data_raw, &data[4], 18);
 		}
 	}
@@ -27,7 +27,7 @@ static void handle_internal_message(uint8_t *data, size_t size) {
 	g_rc_state[1] = g_rc_data_raw[17];
 
 	publish(COMMAND_SET_STATE, g_rc_state, 2);
-	publish(COMMAND_SET_MOVE_IN, g_rc_move_in, 16);
+	publish(COMMAND_SET_MOVE_IN, (uint8_t*)g_rc_move_in, 16);
 }
 
 void remote_control_setup(void) {
