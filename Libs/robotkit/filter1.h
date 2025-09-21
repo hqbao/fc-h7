@@ -10,8 +10,6 @@ typedef struct {
     vector3d_t a_smooth;
     vector3d_t v_pred;
     vector3d_t v_true;
-    vector3d_t pred_euler_angle;
-    vector3d_t true_euler_angle;
     vector3d_t v_linear_acc;
     vector3d_t v_linear_acc_smooth;
     double freq;

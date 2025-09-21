@@ -326,6 +326,7 @@ NVIC.TIM7_IRQn=true\:0\:0\:false\:false\:true\:true\:true\:true
 NVIC.TIM8_TRG_COM_TIM14_IRQn=true\:0\:0\:false\:false\:true\:true\:true\:true
 NVIC.TIM8_UP_TIM13_IRQn=true\:0\:0\:false\:false\:true\:true\:true\:true
 NVIC.USART1_IRQn=true\:0\:0\:false\:false\:true\:true\:true\:true
+NVIC.USART3_IRQn=true\:0\:0\:false\:false\:true\:true\:true\:true
 NVIC.UsageFault_IRQn=true\:0\:0\:false\:false\:true\:false\:false\:false
 PA0.Locked=true
 PA0.Signal=S_TIM2_CH1_ETR

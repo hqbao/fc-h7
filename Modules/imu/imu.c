@@ -38,9 +38,9 @@ static imu_t g_imu1 = {
 		{0},
 		0,
 		init,
-		SENSOR_IMU_GYRO_CALIBRATION_UPDATE,
-		SENSOR_IMU_GYRO_UPDATE,
-		SENSOR_IMU_ACCEL_UPDATE
+		SENSOR_IMU1_GYRO_CALIBRATION_UPDATE,
+		SENSOR_IMU1_GYRO_UPDATE,
+		SENSOR_IMU1_ACCEL_UPDATE
 };
 
 static void publish_data(imu_t *imu) {
@@ -114,5 +114,5 @@ void imu_setup(void) {
 	icm42688p_init(&g_imu1.imu_sensor,
 			AFS_2G, GFS_2000DPS, AODR_25Hz, GODR_32kHz, aMode_LN, gMode_LN, 0);
 	subscribe(SCHEDULER_4KHZ, imu1_loop);
-	subscribe(SENSOR_IMU_CALIBRATE_GYRO, imu1_calibrate);
+	subscribe(SENSOR_IMU1_CALIBRATE_GYRO, imu1_calibrate);
 }

@@ -14,8 +14,8 @@
 #define ACCEL_OFFSET_Z 0
 
 static filter1_t g_f11;
-static vector3d_t g_imu_gyro = {0, 0, 0};
-static vector3d_t g_imu_accel = {0, 0, MAX_IMU_ACCEL};
+static vector3d_t g_imu1_gyro = {0, 0, 0};
+static vector3d_t g_imu1_accel = {0, 0, MAX_IMU_ACCEL};
 
 static filter1_t g_f12;
 static vector3d_t g_imu2_gyro = {0, 0, 0};
@@ -31,11 +31,11 @@ static void gyro_update(uint8_t *data, size_t size) {
 	float gz = (*(float*)&data[8]);
 	double dt = 1.0 / IMU_FREQ;
 
-	vector3d_init(&g_imu_gyro, gx, gy, gz);
+	vector3d_init(&g_imu1_gyro, gx, gy, gz);
 	filter1_predict(&g_f11,
-			dt * g_imu_gyro.x * DEG2RAD,
-			dt * g_imu_gyro.y * DEG2RAD,
-			dt * g_imu_gyro.z * DEG2RAD);
+			dt * g_imu1_gyro.x * DEG2RAD,
+			dt * g_imu1_gyro.y * DEG2RAD,
+			dt * g_imu1_gyro.z * DEG2RAD);
 
 	vector3d_init(&g_imu2_gyro, gx, gz, -gy);
 	filter1_predict(&g_f12,
@@ -57,8 +57,8 @@ static void accel_update(uint8_t *data, size_t size) {
 	float ay = -(*(float*)&data[0]) - ACCEL_OFFSET_Y;
 	float az = (*(float*)&data[8]) - ACCEL_OFFSET_Z;
 
-	vector3d_init(&g_imu_accel, ax, ay, az);
-	filter1_update(&g_f11, g_imu_accel.x, g_imu_accel.y, g_imu_accel.z);
+	vector3d_init(&g_imu1_accel, ax, ay, az);
+	filter1_update(&g_f11, g_imu1_accel.x, g_imu1_accel.y, g_imu1_accel.z);
 
 	vector3d_init(&g_imu2_accel, az, ay, -ax);
 	filter1_update(&g_f12, g_imu2_accel.x, g_imu2_accel.y, g_imu2_accel.z);
@@ -85,7 +85,7 @@ static void init(void) {
 
 void attitude_fusion_setup(void) {
 	init();
-	subscribe(SENSOR_IMU_GYRO_UPDATE, gyro_update);
-	subscribe(SENSOR_IMU_ACCEL_UPDATE, accel_update);
+	subscribe(SENSOR_IMU1_GYRO_UPDATE, gyro_update);
+	subscribe(SENSOR_IMU1_ACCEL_UPDATE, accel_update);
 }
 

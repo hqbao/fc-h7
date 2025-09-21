@@ -45,6 +45,6 @@ static void init(void) {
 
 void attitude_fusion_ekf_setup(void) {
 	init();
-	subscribe(SENSOR_IMU_GYRO_UPDATE, gyro_update);
-	subscribe(SENSOR_IMU_ACCEL_UPDATE, accel_update);
+	subscribe(SENSOR_IMU1_GYRO_UPDATE, gyro_update);
+	subscribe(SENSOR_IMU1_ACCEL_UPDATE, accel_update);
 }

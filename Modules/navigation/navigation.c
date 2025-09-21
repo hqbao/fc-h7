@@ -13,13 +13,13 @@ typedef struct {
 } rc_att_ctl_t;
 
 static double g_air_pressure_alt = 0;
+static vector3d_t g_optflow = {0, 0, 0};
 static vector3d_t g_linear_veloc = {0, 0, 0};
 static rc_att_ctl_t g_rc_att_ctl;
 
 static void linear_accel_update(uint8_t *data, size_t size) {
 	vector3d_t v = *(vector3d_t*)data;
 	vector3d_add(&g_linear_veloc, &g_linear_veloc, &v);
-	publish(SENSOR_LINEAR_VELOC, (uint8_t*)&g_linear_veloc, sizeof(vector3d_t));
 }
 
 static void air_pressure_update(uint8_t *data, size_t size) {
@@ -33,9 +33,16 @@ static void move_in_control_update(uint8_t *data, size_t size) {
 	g_rc_att_ctl.alt 	= (*(float*)&data[12]);
 }
 
+static void optflow_sensor_update(uint8_t *data, size_t size) {
+	g_optflow.x = (double)(*(int*)&data[0]);
+	g_optflow.y = (double)(*(int*)&data[4]);
+	g_optflow.z = (double)(*(int*)&data[8]);
+}
+
 void navigation_setup(void) {
 	subscribe(SENSOR_LINEAR_ACCEL, linear_accel_update);
 	subscribe(SENSOR_AIR_PRESSURE, air_pressure_update);
 	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
+	subscribe(EXTERNAL_SENSOR_OPTFLOW, optflow_sensor_update);
 }
 

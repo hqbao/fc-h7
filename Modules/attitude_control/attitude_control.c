@@ -34,7 +34,6 @@ typedef struct {
 
 static int g_output_speed[4] = {0, 0, 0, 0};
 static vector3d_t g_state_vector = {0, 0, 1};
-static vector3d_t g_target_vector = {0, 0, 1};
 static state_t g_state = DISARMED;
 static char g_imu_calibrated = 0;
 static rc_state_ctl_t g_rc_state_ctl;
@@ -52,7 +51,7 @@ static void attitude_update(uint8_t *data, size_t size) {
 
 static void on_imu_calibration_result(uint8_t *data, size_t size) {
 	if (data[0] == 1) g_imu_calibrated = 1;
-	else publish(SENSOR_IMU_CALIBRATE_GYRO, NULL, 0);
+	else publish(SENSOR_IMU1_CALIBRATE_GYRO, NULL, 0);
 }
 
 static void state_control_update(uint8_t *data, size_t size) {
@@ -65,10 +64,6 @@ static void move_in_control_update(uint8_t *data, size_t size) {
 	g_rc_att_ctl.pitch	= (*(float*)&data[4]);
 	g_rc_att_ctl.yaw 	= (*(float*)&data[8]);
 	g_rc_att_ctl.alt 	= (*(float*)&data[12]);
-}
-
-static void update_target_attitude(uint8_t *data, size_t size) {
-	g_target_vector = *(vector3d_t*)data;
 }
 
 static void pid_setup(void) {
@@ -179,13 +174,12 @@ void attitude_control_setup(void) {
 	platform_dshot_init(DSHOT_PORT3);
 	platform_dshot_init(DSHOT_PORT4);
 
-	subscribe(SENSOR_IMU_GYRO_CALIBRATION_UPDATE, on_imu_calibration_result);
+	subscribe(SENSOR_IMU1_GYRO_CALIBRATION_UPDATE, on_imu_calibration_result);
 	subscribe(SENSOR_ATTITUDE_VECTOR, attitude_update);
-	subscribe(COMMAND_SET_STATE, state_control_update);
-	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
-	subscribe(NAV_SET_TARGET_ATTITUDE, update_target_attitude);
+	subscribe(COMMAND_SET_STATE, state_control_update); // For starter
+	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update); // For starter
 	subscribe(SCHEDULER_1KHZ, attitude_control_loop);
 	subscribe(SCHEDULER_100HZ, attitude_control_loop_100hz);
 
-	publish(SENSOR_IMU_CALIBRATE_GYRO, NULL, 0);
+	publish(SENSOR_IMU1_CALIBRATE_GYRO, NULL, 0);
 }
