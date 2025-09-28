@@ -21,7 +21,7 @@ void platform_setup(void) {
 	navigation_setup();
 	optflow_setup();
 	state_detector_setup();
-	//logger_setup();
+	logger_setup();
 	//test_setup();
 	//imu_calibrator_setup();
 }

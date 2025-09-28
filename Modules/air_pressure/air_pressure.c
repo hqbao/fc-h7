@@ -6,7 +6,7 @@
 
 #define ALT_SAMPLES 100
 
-static float g_air_pressure = 0;
+static double g_air_pressure = 0;
 
 static void air_pressure_init(void) {
 	platform_delay(100);
@@ -18,7 +18,7 @@ static void air_pressure_loop(uint8_t *data, size_t size) {
     static int g_alt_counter = -10;
     static float g_alt_off = 0;
     if (g_alt_counter > ALT_SAMPLES) {
-    	float air_pressure = 1000.0 * (get_altitude() - g_alt_off);
+    	double air_pressure = 1000.0 * (get_altitude() - g_alt_off);
     	g_air_pressure += 0.05 * (air_pressure - g_air_pressure);
     } else if (g_alt_counter == ALT_SAMPLES) {
         g_alt_off = g_alt_off / ALT_SAMPLES;
@@ -32,7 +32,7 @@ static void air_pressure_loop(uint8_t *data, size_t size) {
 }
 
 static void publish_loop(uint8_t *data, size_t size) {
-	publish(SENSOR_AIR_PRESSURE, (uint8_t*)&g_air_pressure, sizeof(float));
+	publish(SENSOR_AIR_PRESSURE, (uint8_t*)&g_air_pressure, sizeof(double));
 }
 
 void air_pressure_setup(void) {

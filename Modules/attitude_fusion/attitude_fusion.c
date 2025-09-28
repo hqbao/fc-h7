@@ -79,12 +79,12 @@ static void accel_update(uint8_t *data, size_t size) {
 	vector3d_init(&g_imu3_accel, ax, az, -ay);
 	filter1_update(&g_f13, g_imu3_accel.x, g_imu3_accel.y, g_imu3_accel.z);
 
-	publish(SENSOR_LINEAR_ACCEL, (uint8_t*)&g_f11.linear_accel, sizeof(vector3d_t));
-	publish(MONITOR_DATA, (uint8_t*)&g_f11.linear_accel, sizeof(double));
+	publish(SENSOR_LINEAR_ACCEL, (uint8_t*)&g_f11.v_linear_acc, sizeof(vector3d_t));
 }
 
 static void init(void) {
 	filter1_init(&g_f11, 4.0, 0.5, IMU_FREQ);
+	g_f11.accel_scale = MAX_IMU_ACCEL;
 	//g_f11.no_correction = 1;
 
 	filter1_init(&g_f12, 4.0, 0.5, IMU_FREQ);
