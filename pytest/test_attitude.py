@@ -57,10 +57,10 @@ def run_parser():
       if g_clazz == 0x00:
         z1 = int.from_bytes(payload[:4], 'little', signed='True')
         z2 = int.from_bytes(payload[4:8], 'little', signed='True')
-        z3 = int.from_bytes(payload[8:12], 'little', signed='True') - 1000
+        z3 = int.from_bytes(payload[8:12], 'little', signed='True')
         z4 = int.from_bytes(payload[12:16], 'little', signed='True')
         z5 = int.from_bytes(payload[16:20], 'little', signed='True')
-        z6 = int.from_bytes(payload[20:24], 'little', signed='True') - 1000
+        z6 = int.from_bytes(payload[20:24], 'little', signed='True')
         # print(z1, z2, z3, z4, z5, z6)
 
         g_val1[g_cur_idx] = z1
@@ -95,15 +95,15 @@ def animate(i):
     val1 = np.concatenate((g_val1[g_cur_idx:], g_val1[:g_cur_idx]))
     val2 = np.concatenate((g_val2[g_cur_idx:], g_val2[:g_cur_idx]))
     val3 = np.concatenate((g_val3[g_cur_idx:], g_val3[:g_cur_idx]))
-    val4 = np.concatenate((g_val4[g_cur_idx:], g_val4[:g_cur_idx]))
-    val5 = np.concatenate((g_val5[g_cur_idx:], g_val5[:g_cur_idx]))
-    val6 = np.concatenate((g_val6[g_cur_idx:], g_val6[:g_cur_idx]))
+    # val4 = np.concatenate((g_val4[g_cur_idx:], g_val4[:g_cur_idx]))
+    # val5 = np.concatenate((g_val5[g_cur_idx:], g_val5[:g_cur_idx]))
+    # val6 = np.concatenate((g_val6[g_cur_idx:], g_val6[:g_cur_idx]))
     ax.plot(g_line, val1, color='red')
     ax.plot(g_line, val2, color='orange')
     ax.plot(g_line, val3, color='purple')
-    ax.plot(g_line, val4, color='blue')
-    ax.plot(g_line, val5, color='green')
-    ax.plot(g_line, val6, color='cyan')
+    # ax.plot(g_line, val4, color='blue')
+    # ax.plot(g_line, val5, color='green')
+    # ax.plot(g_line, val6, color='cyan')
     # ax.set_ylim([-2000, 2000])
 
 anim = animation.FuncAnimation(fig, animate, frames=len(g_line) + 1, interval=1, blit=False)

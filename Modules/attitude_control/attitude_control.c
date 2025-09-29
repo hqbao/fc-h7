@@ -28,9 +28,9 @@ typedef struct {
 } rc_att_ctl_t;
 
 typedef struct {
-	float roll;
-	float pitch;
-	float yaw;
+	double roll;
+	double pitch;
+	double yaw;
 } angle3d_t;
 
 static int g_output_speed[4] = {0, 0, 0, 0};
@@ -41,18 +41,19 @@ static state_t g_state = DISARMED;
 static pid_control_t g_pid_att_roll;
 static pid_control_t g_pid_att_pitch;
 static pid_control_t g_pid_att_yaw;
-static pid_control_t g_pid_alt;
 
 static rc_att_ctl_t g_rc_att_ctl;
 
 static double g_take_off_speed = MIN_SPEED;
+static double g_altitude = 0;
 
 static void angular_state_update(uint8_t *data, size_t size) {
-	g_angular_state = *(angle3d_t*)data;
+	memcpy(&g_angular_state, data, size);
 }
 
 static void angular_target_update(uint8_t *data, size_t size) {
-	g_angular_target = *(angle3d_t*)data;
+	memcpy(&g_angular_target, data, sizeof(angle3d_t));
+	g_altitude = *(double*)&data[24];
 }
 
 static void state_update(uint8_t *data, size_t size) {
@@ -71,40 +72,33 @@ static void pid_setup(void) {
 	pid_control_set_p_gain(&g_pid_att_roll, 50);
 	pid_control_set_d_gain(&g_pid_att_roll, 5);
 	pid_control_set_i_gain(&g_pid_att_roll, 0, 1.0);
-	pid_control_set_i_limit(&g_pid_att_roll, 100);
+	pid_control_set_i_limit(&g_pid_att_roll, 5);
 	pid_control_set_smooth(&g_pid_att_roll, 1.0, 1.0, 1.0);
 
 	pid_control_init(&g_pid_att_pitch);
 	pid_control_set_p_gain(&g_pid_att_pitch, 50);
 	pid_control_set_d_gain(&g_pid_att_pitch, 5);
 	pid_control_set_i_gain(&g_pid_att_pitch, 0, 1.0);
-	pid_control_set_i_limit(&g_pid_att_pitch, 100);
+	pid_control_set_i_limit(&g_pid_att_pitch, 5);
 	pid_control_set_smooth(&g_pid_att_pitch, 1.0, 1.0, 1.0);
 
 	pid_control_init(&g_pid_att_yaw);
 	pid_control_set_p_gain(&g_pid_att_yaw, 50);
 	pid_control_set_d_gain(&g_pid_att_yaw, 5);
 	pid_control_set_i_gain(&g_pid_att_yaw, 0, 1.0);
-	pid_control_set_i_limit(&g_pid_att_yaw, 100);
+	pid_control_set_i_limit(&g_pid_att_yaw, 5);
 	pid_control_set_smooth(&g_pid_att_yaw, 1.0, 1.0, 1.0);
-
-	pid_control_init(&g_pid_alt);
-	pid_control_set_p_gain(&g_pid_alt, 50);
-	pid_control_set_d_gain(&g_pid_alt, 5);
-	pid_control_set_i_gain(&g_pid_alt, 0, 1.0);
-	pid_control_set_i_limit(&g_pid_alt, 100);
-	pid_control_set_smooth(&g_pid_alt, 1.0, 1.0, 1.0);
 }
 
 static void pid_loop(void) {
 	double dt = 1.0 / PID_FREQ;
 	pid_control_update(&g_pid_att_roll, 	g_angular_state.roll, 	g_angular_target.roll, dt);
 	pid_control_update(&g_pid_att_pitch,	g_angular_state.pitch, 	g_angular_target.pitch, dt);
-	pid_control_update(&g_pid_att_yaw, 		g_angular_state.yaw, 	g_angular_target.yaw, dt);
-	double m1 = g_take_off_speed + g_pid_alt.output + g_pid_att_roll.output - g_pid_att_pitch.output - g_pid_att_yaw.output;
-	double m2 = g_take_off_speed + g_pid_alt.output - g_pid_att_roll.output - g_pid_att_pitch.output + g_pid_att_yaw.output;
-	double m3 = g_take_off_speed + g_pid_alt.output - g_pid_att_roll.output + g_pid_att_pitch.output - g_pid_att_yaw.output;
-	double m4 = g_take_off_speed + g_pid_alt.output + g_pid_att_roll.output + g_pid_att_pitch.output + g_pid_att_yaw.output;
+	pid_control_update(&g_pid_att_yaw, 		g_angular_state.yaw, 	g_angular_state.yaw + g_angular_target.yaw, dt);
+	double m1 = g_take_off_speed - g_altitude + g_pid_att_roll.output - g_pid_att_pitch.output - g_pid_att_yaw.output;
+	double m2 = g_take_off_speed - g_altitude - g_pid_att_roll.output - g_pid_att_pitch.output + g_pid_att_yaw.output;
+	double m3 = g_take_off_speed - g_altitude - g_pid_att_roll.output + g_pid_att_pitch.output - g_pid_att_yaw.output;
+	double m4 = g_take_off_speed - g_altitude + g_pid_att_roll.output + g_pid_att_pitch.output + g_pid_att_yaw.output;
 	g_output_speed[0] = LIMIT((int)m1, MIN_SPEED, MAX_SPEED);
 	g_output_speed[1] = LIMIT((int)m2, MIN_SPEED, MAX_SPEED);
 	g_output_speed[2] = LIMIT((int)m3, MIN_SPEED, MAX_SPEED);

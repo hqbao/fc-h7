@@ -5,7 +5,8 @@
 #include <attitude_control/attitude_control.h>
 #include <remote_control/remote_control.h>
 #include <imu_calibrator/imu_calibrator.h>
-#include <navigation/navigation.h>
+#include <nav_fusion/nav_fusion.h>
+#include <nav_control/nav_control.h>
 #include <optflow/optflow.h>
 #include <state_detector/state_detector.h>
 #include <logger/logger.h>
@@ -18,7 +19,8 @@ void platform_setup(void) {
 	air_pressure_setup();
 	attitude_control_setup();
 	remote_control_setup();
-	navigation_setup();
+	nav_fusion_setup();
+	nav_control_setup();
 	optflow_setup();
 	state_detector_setup();
 	logger_setup();

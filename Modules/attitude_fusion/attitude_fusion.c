@@ -15,9 +15,9 @@
 #define ACCEL_OFFSET_Z 0
 
 typedef struct {
-	float roll;
-	float pitch;
-	float yaw;
+	double roll;
+	double pitch;
+	double yaw;
 } angle3d_t;
 
 static filter1_t g_f11;

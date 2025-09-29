@@ -1,4 +1,4 @@
-#include "navigation.h"
+#include "nav_fusion.h"
 #include <pubsub.h>
 #include <platform.h>
 #include <vector3d.h>
@@ -9,18 +9,6 @@
 
 #define NAV_FREQ 1000
 
-typedef struct {
-	float state;
-	float mode;
-} rc_state_ctl_t;
-
-typedef struct {
-	float roll;
-	float pitch;
-	float yaw;
-	float alt;
-} rc_att_ctl_t;
-
 static double g_optflow_x = 0;
 static double g_optflow_y = 0;
 static double g_air_pressure_alt = 0;
@@ -29,15 +17,10 @@ static double g_air_pressure_alt_d = 0;
 static vector3d_t g_optflow = {0, 0, 0};
 static vector3d_t g_linear_accel = {0, 0, 0};
 static vector3d_t g_linear_veloc = {0, 0, 0};
-static vector3d_t g_linear_veloc_bias = {0, 0, 0};
 static vector3d_t g_linear_veloc_zero = {0, 0, 0};
 static vector3d_t g_local_pos = {0, 0, 0};
 static vector3d_t g_pos = {0, 0, 0};
-static vector3d_t g_pos_bias = {0, 0, 0};
-
-static rc_state_ctl_t g_rc_state_ctl;
-static rc_att_ctl_t g_rc_att_ctl;
-static char g_set_bias = 0;
+static vector3d_t g_pos_final = {0, 0, 0};
 
 static double coef11 = 1.0;
 static double coef12 = 0.01;
@@ -59,6 +42,7 @@ static double scale11 = 100;
 static double scale12 = 10000;
 static double scale21 = 5.0;
 static double scale22 = 2.0;
+static double scale3 = 0.01;
 
 static void air_pressure_update(uint8_t *data, size_t size) {
 	g_air_pressure_alt = *(double*)data;
@@ -66,18 +50,6 @@ static void air_pressure_update(uint8_t *data, size_t size) {
 	g_air_pressure_alt_prev = g_air_pressure_alt;
 	g_air_pressure_alt_d = (1.0 + scale12 * fabs(g_linear_accel.z)) * air_pressure_alt_d;
 	g_local_pos.z += g_air_pressure_alt_d;
-}
-
-static void state_control_update(uint8_t *data, size_t size) {
-	g_rc_state_ctl.state = data[0];
-	g_rc_state_ctl.mode = data[1];
-}
-
-static void move_in_control_update(uint8_t *data, size_t size) {
-	g_rc_att_ctl.roll 	= (*(float*)&data[0]);
-	g_rc_att_ctl.pitch	= (*(float*)&data[4]);
-	g_rc_att_ctl.yaw 	= (*(float*)&data[8]);
-	g_rc_att_ctl.alt 	= (*(float*)&data[12]);
 }
 
 static void optflow_sensor_update(uint8_t *data, size_t size) {
@@ -127,14 +99,9 @@ static void linear_accel_update(uint8_t *data, size_t size) {
 	g_pos.y += coef51 / NAV_FREQ * (g_local_pos.y - g_pos.y);
 	g_pos.z += coef52 / NAV_FREQ * (g_local_pos.z - g_pos.z);
 
-	if (g_set_bias != 0) {
-		vector3d_set(&g_pos_bias, &g_pos);
-		g_set_bias = 0;
-	}
-
-	int number1 = g_linear_veloc.x;
-	int number2 = g_linear_veloc.y;
-	int number3 = g_linear_veloc.z;
+	int number1 = g_pos.x;
+	int number2 = g_pos.y;
+	int number3 = g_pos.z;
 	static uint8_t g_msg[16] = {0};
 	memcpy(&g_msg[0], &number1, 4);
 	memcpy(&g_msg[4], &number2, 4);
@@ -143,15 +110,14 @@ static void linear_accel_update(uint8_t *data, size_t size) {
 }
 
 static void loop_1khz(uint8_t *data, size_t size) {
-
+	vector3d_scale(&g_pos_final, &g_pos, scale3);
+	publish(NAV_POSITION_UPDATE, (uint8_t*)&g_pos_final, sizeof(vector3d_t));
 }
 
-void navigation_setup(void) {
+void nav_fusion_setup(void) {
+	subscribe(SCHEDULER_1KHZ, loop_1khz);
 	subscribe(SENSOR_LINEAR_ACCEL, linear_accel_update);
 	subscribe(SENSOR_AIR_PRESSURE, air_pressure_update);
-	subscribe(COMMAND_SET_STATE, state_control_update);
-	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
 	subscribe(EXTERNAL_SENSOR_OPTFLOW, optflow_sensor_update);
-	subscribe(SCHEDULER_1KHZ, loop_1khz);
 }
 
