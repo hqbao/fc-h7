@@ -100,11 +100,19 @@ static void loop_100hz(uint8_t *data, size_t size) {
 	g_state_prev = g_state;
 }
 
+static void loop_1hz(uint8_t *data, size_t size) {
+	static int counter_2s = 0;
+	if (counter_2s <= 2) {
+		if (counter_2s == 2) publish(SENSOR_IMU1_CALIBRATE_GYRO, NULL, 0);
+		counter_2s++;
+	}
+}
+
 void state_detector_setup(void) {
 	subscribe(SENSOR_IMU1_GYRO_CALIBRATION_UPDATE, on_imu_calibration_result);
 	subscribe(COMMAND_SET_STATE, state_control_update);
 	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
 	subscribe(EXTERNAL_SENSOR_OPTFLOW, optflow_sensor_update);
 	subscribe(SCHEDULER_100HZ, loop_100hz);
-	publish(SENSOR_IMU1_CALIBRATE_GYRO, NULL, 0);
+	subscribe(SCHEDULER_1HZ, loop_1hz);
 }

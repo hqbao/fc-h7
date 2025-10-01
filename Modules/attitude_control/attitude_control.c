@@ -56,10 +56,6 @@ static void angular_target_update(uint8_t *data, size_t size) {
 	g_altitude = *(double*)&data[24];
 }
 
-static void state_update(uint8_t *data, size_t size) {
-	g_state = (state_t)data[0];
-}
-
 static void move_in_control_update(uint8_t *data, size_t size) {
 	g_rc_att_ctl.roll 	= (*(float*)&data[0]);
 	g_rc_att_ctl.pitch	= (*(float*)&data[4]);
@@ -69,25 +65,25 @@ static void move_in_control_update(uint8_t *data, size_t size) {
 
 static void pid_setup(void) {
 	pid_control_init(&g_pid_att_roll);
-	pid_control_set_p_gain(&g_pid_att_roll, 50);
-	pid_control_set_d_gain(&g_pid_att_roll, 5);
+	pid_control_set_p_gain(&g_pid_att_roll, 20);
+	pid_control_set_d_gain(&g_pid_att_roll, 4);
 	pid_control_set_i_gain(&g_pid_att_roll, 0, 1.0);
 	pid_control_set_i_limit(&g_pid_att_roll, 5);
-	pid_control_set_smooth(&g_pid_att_roll, 1.0, 1.0, 1.0);
+	pid_control_set_smooth(&g_pid_att_roll, 1.0, 0.5, 1.0);
 
 	pid_control_init(&g_pid_att_pitch);
-	pid_control_set_p_gain(&g_pid_att_pitch, 50);
-	pid_control_set_d_gain(&g_pid_att_pitch, 5);
+	pid_control_set_p_gain(&g_pid_att_pitch, 20);
+	pid_control_set_d_gain(&g_pid_att_pitch, 4);
 	pid_control_set_i_gain(&g_pid_att_pitch, 0, 1.0);
 	pid_control_set_i_limit(&g_pid_att_pitch, 5);
-	pid_control_set_smooth(&g_pid_att_pitch, 1.0, 1.0, 1.0);
+	pid_control_set_smooth(&g_pid_att_pitch, 1.0, 0.5, 1.0);
 
 	pid_control_init(&g_pid_att_yaw);
-	pid_control_set_p_gain(&g_pid_att_yaw, 50);
-	pid_control_set_d_gain(&g_pid_att_yaw, 5);
+	pid_control_set_p_gain(&g_pid_att_yaw, 20);
+	pid_control_set_d_gain(&g_pid_att_yaw, 4);
 	pid_control_set_i_gain(&g_pid_att_yaw, 0, 1.0);
 	pid_control_set_i_limit(&g_pid_att_yaw, 5);
-	pid_control_set_smooth(&g_pid_att_yaw, 1.0, 1.0, 1.0);
+	pid_control_set_smooth(&g_pid_att_yaw, 1.0, 0.5, 1.0);
 }
 
 static void pid_loop(void) {
@@ -140,6 +136,19 @@ static void attitude_control_loop(uint8_t *data, size_t size) {
 		platform_dshot_send(DSHOT_PORT2, g_output_speed[1]);
 		platform_dshot_send(DSHOT_PORT3, g_output_speed[2]);
 		platform_dshot_send(DSHOT_PORT4, g_output_speed[3]);
+	}
+}
+
+static void reset(void) {
+	pid_control_reset(&g_pid_att_roll, g_angular_state.roll);
+	pid_control_reset(&g_pid_att_pitch, g_angular_state.pitch);
+	pid_control_reset(&g_pid_att_yaw, g_angular_state.yaw);
+}
+
+static void state_update(uint8_t *data, size_t size) {
+	g_state = (state_t)data[0];
+	if (g_state == ARMED || g_state == READY || g_state == TAKING_OFF) {
+		reset();
 	}
 }
 
