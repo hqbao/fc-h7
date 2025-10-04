@@ -18,8 +18,8 @@ static void air_pressure_loop(uint8_t *data, size_t size) {
     static int g_alt_counter = -10;
     static float g_alt_off = 0;
     if (g_alt_counter > ALT_SAMPLES) {
-    	double air_pressure = 1000.0 * (get_altitude() - g_alt_off);
-    	g_air_pressure += 0.05 * (air_pressure - g_air_pressure);
+    	g_air_pressure = 1000.0 * (get_altitude() - g_alt_off);
+    	publish(SENSOR_AIR_PRESSURE, (uint8_t*)&g_air_pressure, sizeof(double));
     } else if (g_alt_counter == ALT_SAMPLES) {
         g_alt_off = g_alt_off / ALT_SAMPLES;
         g_alt_counter += 1;
@@ -31,12 +31,7 @@ static void air_pressure_loop(uint8_t *data, size_t size) {
     }
 }
 
-static void publish_loop(uint8_t *data, size_t size) {
-	publish(SENSOR_AIR_PRESSURE, (uint8_t*)&g_air_pressure, sizeof(double));
-}
-
 void air_pressure_setup(void) {
 	air_pressure_init();
 	subscribe(LOOP, air_pressure_loop);
-	subscribe(SCHEDULER_100HZ, publish_loop);
 }

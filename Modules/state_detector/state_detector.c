@@ -3,6 +3,7 @@
 #include <platform.h>
 #include <string.h>
 #include <vector3d.h>
+#include <math.h>
 #include <macro.h>
 
 typedef enum {
@@ -15,8 +16,8 @@ typedef enum {
 } state_t;
 
 typedef struct {
-	float state;
-	float mode;
+	uint8_t state;
+	uint8_t mode;
 } rc_state_ctl_t;
 
 typedef struct {
@@ -26,6 +27,13 @@ typedef struct {
 	float alt;
 } rc_att_ctl_t;
 
+typedef struct {
+	double roll;
+	double pitch;
+	double yaw;
+} angle3d_t;
+
+static angle3d_t g_angular_state = {0, 0, 0};
 static vector3d_t g_optflow = {0, 0, 0};
 static rc_state_ctl_t g_rc_state_ctl;
 static rc_state_ctl_t g_rc_state_ctl_prev;
@@ -35,15 +43,11 @@ static state_t g_state_prev = DISARMED;
 static char g_imu_calibrated = 0;
 
 static void state_control_update(uint8_t *data, size_t size) {
-	g_rc_state_ctl.state = data[0];
-	g_rc_state_ctl.mode = data[1];
+	memcpy(&g_rc_state_ctl, data, size);
 }
 
 static void move_in_control_update(uint8_t *data, size_t size) {
-	g_rc_att_ctl.roll 	= (*(float*)&data[0]);
-	g_rc_att_ctl.pitch	= (*(float*)&data[4]);
-	g_rc_att_ctl.yaw 	= (*(float*)&data[8]);
-	g_rc_att_ctl.alt 	= (*(float*)&data[12]);
+	memcpy(&g_rc_att_ctl, data, size);
 }
 
 static void optflow_sensor_update(uint8_t *data, size_t size) {
@@ -106,6 +110,14 @@ static void loop_1hz(uint8_t *data, size_t size) {
 		if (counter_2s == 2) publish(SENSOR_IMU1_CALIBRATE_GYRO, NULL, 0);
 		counter_2s++;
 	}
+
+	if (fabs(g_angular_state.roll) > 60 || fabs(g_angular_state.pitch) > 60) {
+		g_state = DISARMED;
+	}
+}
+
+static void angular_state_update(uint8_t *data, size_t size) {
+	memcpy(&g_angular_state, data, size);
 }
 
 void state_detector_setup(void) {
@@ -113,6 +125,7 @@ void state_detector_setup(void) {
 	subscribe(COMMAND_SET_STATE, state_control_update);
 	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
 	subscribe(EXTERNAL_SENSOR_OPTFLOW, optflow_sensor_update);
+	subscribe(SENSOR_ATTITUDE_ANGLE, angular_state_update);
 	subscribe(SCHEDULER_100HZ, loop_100hz);
 	subscribe(SCHEDULER_1HZ, loop_1hz);
 }
