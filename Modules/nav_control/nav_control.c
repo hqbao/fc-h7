@@ -66,8 +66,8 @@ static void pid_setup(void) {
 	pid_control_set_smooth(&g_pid_nav_y, 1.0, 1.0, 1.0);
 
 	pid_control_init(&g_pid_nav_z);
-	pid_control_set_p_gain(&g_pid_nav_z, 50);
-	pid_control_set_d_gain(&g_pid_nav_z, 2);
+	pid_control_set_p_gain(&g_pid_nav_z, 25);
+	pid_control_set_d_gain(&g_pid_nav_z, 1);
 	pid_control_set_i_gain(&g_pid_nav_z, 0, 1.0);
 	pid_control_set_smooth(&g_pid_nav_z, 1.0, 1.0, 0.005);
 }
@@ -141,7 +141,7 @@ static void loop_100hz(uint8_t *data, size_t size) {
 			g_pos_bias.z = g_pos_target.z - g_pos_final.z;
 			g_moving_state_alt = CTL_FREQ;
 		}
-		g_pos_target.z = g_pos_final.z + g_pos_bias.z + g_rc_att_ctl.alt * 2.0;
+		g_pos_target.z = g_pos_final.z + g_pos_bias.z + g_rc_att_ctl.alt * 3.0;
 	} else if (g_moving_state_alt > 0) {
 		g_pos_target.z = g_pos_final.z + g_pos_bias.z;
 		g_moving_state_alt -= 1;

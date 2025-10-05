@@ -52,11 +52,11 @@ static double coef1 = 1.25;
 static double coef2 = 20;
 static double coef3 = 0.01;
 static double coef41 = 0.01;
-static double coef42 = 0.01;
-
-static double scale11 = 0.05;
-static double scale12 = 0.005;
-static double scale2 = 0.2;
+static double coef421 = 0.005;
+static double coef422 = 0.0005;
+static double coef51 = 0.05;
+static double coef52 = 0.005;
+static double scale1 = 0.2;
 static double threshold1 = 300;
 
 static void state_control_update(uint8_t *data, size_t size) {
@@ -73,36 +73,43 @@ static void optflow_sensor_update(uint8_t *data, size_t size) {
 
 	g_linear_veloc.x += coef41 * (g_optflow.dx - g_linear_veloc.x);
 	g_linear_veloc.y += coef41 * (g_optflow.dy - g_linear_veloc.y);
+
+	if (g_rc_state_ctl.mode == 1) {
+		g_alt = g_optflow.z;
+		if (g_rc_state_ctl_prev.mode != 1) {
+			g_alt_prev = g_alt;
+		}
+
+		double g_alt_d = g_alt - g_alt_prev;
+		g_alt_prev = g_alt;
+		g_linear_veloc.z += coef421 * (g_alt_d - g_linear_veloc.z);
+		g_local_pos.z += g_alt_d;
+
+		g_rc_state_ctl_prev.mode = g_rc_state_ctl.mode;
+	}
 }
 
 static void air_pressure_update(uint8_t *data, size_t size) {
 	g_air_pressure_alt_raw = *(double*)data;
 	if (fabs(g_linear_accel.z) > threshold1) {
-		g_air_pressure_alt += scale11 * (g_air_pressure_alt_raw - g_air_pressure_alt);
+		g_air_pressure_alt += coef51 * (g_air_pressure_alt_raw - g_air_pressure_alt);
 	} else {
-		g_air_pressure_alt += scale12 * (g_air_pressure_alt_raw - g_air_pressure_alt);
+		g_air_pressure_alt += coef52 * (g_air_pressure_alt_raw - g_air_pressure_alt);
 	}
-}
 
-static void loop_100hz(uint8_t *data, size_t size) {
 	if (g_rc_state_ctl.mode == 0) {
 		g_alt = g_air_pressure_alt;
 		if (g_rc_state_ctl_prev.mode != 0) {
 			g_alt_prev = g_alt;
 		}
-	} else if (g_rc_state_ctl.mode == 1) {
-		g_alt = g_optflow.z;
-		if (g_rc_state_ctl_prev.mode != 1) {
-			g_alt_prev = g_alt;
-		}
+
+		double g_alt_d = g_alt - g_alt_prev;
+		g_alt_prev = g_alt;
+		g_linear_veloc.z += coef422 * (g_alt_d - g_linear_veloc.z);
+		g_local_pos.z += g_alt_d;
+
+		g_rc_state_ctl_prev.mode = g_rc_state_ctl.mode;
 	}
-
-	double air_pressure_alt_d = g_alt - g_alt_prev;
-	g_alt_prev = g_alt;
-	g_linear_veloc.z += coef42 * (air_pressure_alt_d - g_linear_veloc.z);
-	g_local_pos.z += air_pressure_alt_d;
-
-	memcpy(&g_rc_state_ctl_prev, &g_rc_state_ctl, sizeof(rc_state_ctl_t));
 }
 
 static void linear_accel_update(uint8_t *data, size_t size) {
@@ -126,7 +133,7 @@ static void linear_accel_update(uint8_t *data, size_t size) {
 
 static void loop_1khz(uint8_t *data, size_t size) {
 	vector3d_sub(&g_pos_final, &g_pos, &g_pos_bias);
-	vector3d_scale(&g_pos_final, &g_pos_final, scale2);
+	vector3d_scale(&g_pos_final, &g_pos_final, scale1);
 	g_pos_final.x = -g_pos_final.x;
 	g_pos_final.y = -g_pos_final.y;
 
@@ -160,7 +167,6 @@ static void state_update(uint8_t *data, size_t size) {
 
 void nav_fusion_setup(void) {
 	subscribe(SCHEDULER_1KHZ, loop_1khz);
-	subscribe(SCHEDULER_100HZ, loop_100hz);
 	subscribe(SENSOR_LINEAR_ACCEL, linear_accel_update);
 	subscribe(SENSOR_AIR_PRESSURE, air_pressure_update);
 	subscribe(EXTERNAL_SENSOR_OPTFLOW, optflow_sensor_update);
