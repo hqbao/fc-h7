@@ -12,7 +12,9 @@ static function_list_t* g_function_pointers[TOPIC_NULL];
 void publish(topic_t topic, uint8_t *data, size_t size) {
 	function_list_t *cur_fn = g_function_pointers[topic];
 	while (cur_fn != NULL) {
-		cur_fn->callback(data, size);
+		if (cur_fn->callback != NULL) {
+			cur_fn->callback(data, size);
+		}
 		cur_fn = cur_fn->next;
 	}
 }

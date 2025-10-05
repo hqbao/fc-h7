@@ -104,31 +104,20 @@ static void pid_loop(void) {
 }
 
 static void attitude_control_loop(uint8_t *data, size_t size) {
-	if (g_state == DISARMED) {
-		platform_dshot_send(DSHOT_PORT1, 0);
-		platform_dshot_send(DSHOT_PORT2, 0);
-		platform_dshot_send(DSHOT_PORT3, 0);
-		platform_dshot_send(DSHOT_PORT4, 0);
-	}
-	if (g_state == ARMED) {
-		platform_dshot_send(DSHOT_PORT1, 0);
-		platform_dshot_send(DSHOT_PORT2, 0);
-		platform_dshot_send(DSHOT_PORT3, 0);
-		platform_dshot_send(DSHOT_PORT4, 0);
+	if (g_state == DISARMED || g_state == ARMED) {
+		g_output_speed[0] = 0;
+		g_output_speed[1] = 0;
+		g_output_speed[2] = 0;
+		g_output_speed[3] = 0;
 	}
 	else if (g_state == READY) {
-		platform_dshot_send(DSHOT_PORT1, MIN_SPEED);
-		platform_dshot_send(DSHOT_PORT2, MIN_SPEED);
-		platform_dshot_send(DSHOT_PORT3, MIN_SPEED);
-		platform_dshot_send(DSHOT_PORT4, MIN_SPEED);
+		g_output_speed[0] = MIN_SPEED;
+		g_output_speed[1] = MIN_SPEED;
+		g_output_speed[2] = MIN_SPEED;
+		g_output_speed[3] = MIN_SPEED;
 	}
 	else if (g_state == TAKING_OFF || g_state == FLYING || g_state == LANDING) {
 		pid_loop();
-		platform_dshot_send(DSHOT_PORT1, MIN_SPEED + g_output_speed[0]);
-		platform_dshot_send(DSHOT_PORT2, MIN_SPEED + g_output_speed[1]);
-		platform_dshot_send(DSHOT_PORT3, MIN_SPEED + g_output_speed[2]);
-		platform_dshot_send(DSHOT_PORT4, MIN_SPEED + g_output_speed[3]);
-
 		if (g_state == TAKING_OFF) {
 			g_set_point_yaw = g_angular_state.yaw;
 		}
@@ -138,11 +127,9 @@ static void attitude_control_loop(uint8_t *data, size_t size) {
 		g_output_speed[1] = LIMIT(MIN_SPEED + g_rc_att_ctl.alt * 20, 0, MAX_SPEED);
 		g_output_speed[2] = LIMIT(MIN_SPEED + g_rc_att_ctl.roll * 20, 0, MAX_SPEED);
 		g_output_speed[3] = LIMIT(MIN_SPEED + g_rc_att_ctl.pitch * 20, 0, MAX_SPEED);
-		platform_dshot_send(DSHOT_PORT1, g_output_speed[0]);
-		platform_dshot_send(DSHOT_PORT2, g_output_speed[1]);
-		platform_dshot_send(DSHOT_PORT3, g_output_speed[2]);
-		platform_dshot_send(DSHOT_PORT4, g_output_speed[3]);
 	}
+
+	publish(SPEED_CONTROL_UPDATE, (uint8_t*)g_output_speed, sizeof(int) * 4);
 }
 
 static void reset(void) {
@@ -161,10 +148,7 @@ static void state_update(uint8_t *data, size_t size) {
 void attitude_control_setup(void) {
 	pid_setup();
 
-	platform_dshot_init(DSHOT_PORT1);
-	platform_dshot_init(DSHOT_PORT2);
-	platform_dshot_init(DSHOT_PORT3);
-	platform_dshot_init(DSHOT_PORT4);
+	publish(SPEED_CONTROL_SETUP, NULL, 0);
 
 	subscribe(SENSOR_ATTITUDE_ANGLE, angular_state_update);
 	subscribe(SCHEDULER_1KHZ, attitude_control_loop);

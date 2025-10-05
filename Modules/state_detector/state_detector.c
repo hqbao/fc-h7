@@ -153,7 +153,9 @@ static void loop_100hz(uint8_t *data, size_t size) {
 static void loop_1hz(uint8_t *data, size_t size) {
 	static int counter_2s = 0;
 	if (counter_2s <= 2) {
-		if (counter_2s == 2) publish(SENSOR_IMU1_CALIBRATE_GYRO, NULL, 0);
+		if (counter_2s == 2) {
+			publish(SENSOR_IMU1_CALIBRATE_GYRO, NULL, 0);
+		}
 		counter_2s++;
 	}
 }
