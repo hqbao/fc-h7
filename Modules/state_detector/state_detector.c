@@ -33,8 +33,14 @@ typedef struct {
 	double yaw;
 } angle3d_t;
 
+typedef struct {
+    double dx;
+    double dy;
+    double z;
+} optflow_t;
+
 static angle3d_t g_angular_state = {0, 0, 0};
-static vector3d_t g_optflow = {0, 0, 0};
+static optflow_t g_optflow = {0, 0, 0};
 static rc_state_ctl_t g_rc_state_ctl;
 static rc_state_ctl_t g_rc_state_ctl_prev;
 static rc_att_ctl_t g_rc_att_ctl;
@@ -51,8 +57,8 @@ static void move_in_control_update(uint8_t *data, size_t size) {
 }
 
 static void optflow_sensor_update(uint8_t *data, size_t size) {
-	g_optflow.x = (double)(*(int*)&data[0]);
-	g_optflow.y = (double)(*(int*)&data[4]);
+	g_optflow.dx = (double)(*(int*)&data[4]);
+	g_optflow.dy = (double)(*(int*)&data[0]);
 	g_optflow.z = (double)(*(int*)&data[8]);
 }
 
@@ -95,6 +101,18 @@ static void loop_100hz(uint8_t *data, size_t size) {
 		}
 	}
 
+	if (g_state == FLYING) {
+		if (g_optflow.z < 10 && g_rc_att_ctl.alt == -90) {
+			g_state = DISARMED;
+		}
+	}
+
+	if (g_state == TAKING_OFF || g_state == FLYING) {
+		if (fabs(g_angular_state.roll) > 60 || fabs(g_angular_state.pitch) > 60) {
+			g_state = DISARMED;
+		}
+	}
+
 	memcpy(&g_rc_state_ctl_prev, &g_rc_state_ctl, sizeof(rc_state_ctl_t));
 
 	if (g_state != g_state_prev) {
@@ -109,10 +127,6 @@ static void loop_1hz(uint8_t *data, size_t size) {
 	if (counter_2s <= 2) {
 		if (counter_2s == 2) publish(SENSOR_IMU1_CALIBRATE_GYRO, NULL, 0);
 		counter_2s++;
-	}
-
-	if (fabs(g_angular_state.roll) > 60 || fabs(g_angular_state.pitch) > 60) {
-		g_state = DISARMED;
 	}
 }
 
