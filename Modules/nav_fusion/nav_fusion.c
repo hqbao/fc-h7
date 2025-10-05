@@ -38,6 +38,7 @@ static double g_air_pressure_alt_raw = 0;
 static double g_air_pressure_alt = 0;
 static double g_alt = 0;
 static double g_alt_prev = 0;
+static double g_alt_d = 0;
 static optflow_t g_optflow = {0, 0, 0};
 static vector3d_t g_linear_accel = {0, 0, 0};
 static vector3d_t g_linear_veloc = {0, 0, 0};
@@ -52,8 +53,9 @@ static double coef1 = 1.25;
 static double coef2 = 20;
 static double coef3 = 0.01;
 static double coef41 = 0.01;
-static double coef421 = 0.005;
-static double coef422 = 0.0005;
+static double coef421 = 0.01;
+static double coef422 = 0.005;
+static double coef43 = 100;
 static double coef51 = 0.05;
 static double coef52 = 0.005;
 static double scale1 = 0.2;
@@ -80,9 +82,9 @@ static void optflow_sensor_update(uint8_t *data, size_t size) {
 			g_alt_prev = g_alt;
 		}
 
-		double g_alt_d = g_alt - g_alt_prev;
+		g_alt_d = g_alt - g_alt_prev;
 		g_alt_prev = g_alt;
-		g_linear_veloc.z += coef421 * (g_alt_d - g_linear_veloc.z);
+		g_linear_veloc.z += coef421 * (g_alt_d * coef43 - g_linear_veloc.z);
 		g_local_pos.z += g_alt_d;
 
 		g_rc_state_ctl_prev.mode = g_rc_state_ctl.mode;
@@ -103,9 +105,9 @@ static void air_pressure_update(uint8_t *data, size_t size) {
 			g_alt_prev = g_alt;
 		}
 
-		double g_alt_d = g_alt - g_alt_prev;
+		g_alt_d = g_alt - g_alt_prev;
 		g_alt_prev = g_alt;
-		g_linear_veloc.z += coef422 * (g_alt_d - g_linear_veloc.z);
+		g_linear_veloc.z += coef422 * (g_alt_d * coef43 - g_linear_veloc.z);
 		g_local_pos.z += g_alt_d;
 
 		g_rc_state_ctl_prev.mode = g_rc_state_ctl.mode;
@@ -147,9 +149,9 @@ static void loop_1khz(uint8_t *data, size_t size) {
 
 	publish(NAV_POSITION_UPDATE, (uint8_t*)&g_nav_pos_msg, sizeof(vector3d_t) * 2);
 
-	int number1 = g_local_pos.x;
-	int number2 = g_pos.x;
-	int number3 = g_linear_veloc.x;
+	int number1 = g_alt_d * coef43;
+	int number2 = g_alt_d * coef43;
+	int number3 = g_linear_veloc.z;
 	static uint8_t g_msg[16] = {0};
 	memcpy(&g_msg[0], &number1, 4);
 	memcpy(&g_msg[4], &number2, 4);
