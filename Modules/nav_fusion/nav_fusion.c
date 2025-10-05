@@ -17,6 +17,7 @@ typedef enum {
 	READY,
 	TAKING_OFF,
 	FLYING,
+	LANDING,
 	TESTING,
 } state_t;
 

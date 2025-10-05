@@ -17,6 +17,7 @@ typedef enum {
 	READY,
 	TAKING_OFF,
 	FLYING,
+	LANDING,
 	TESTING,
 } state_t;
 
@@ -121,7 +122,7 @@ static void attitude_control_loop(uint8_t *data, size_t size) {
 		platform_dshot_send(DSHOT_PORT3, MIN_SPEED);
 		platform_dshot_send(DSHOT_PORT4, MIN_SPEED);
 	}
-	else if (g_state == FLYING || g_state == TAKING_OFF) {
+	else if (g_state == TAKING_OFF || g_state == FLYING || g_state == LANDING) {
 		pid_loop();
 		platform_dshot_send(DSHOT_PORT1, MIN_SPEED + g_output_speed[0]);
 		platform_dshot_send(DSHOT_PORT2, MIN_SPEED + g_output_speed[1]);

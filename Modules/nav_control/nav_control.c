@@ -9,6 +9,7 @@
 
 #define NAV_FREQ 1000
 #define CTL_FREQ 100
+#define MIN_LANDING_SPEED 50
 
 typedef enum {
 	DISARMED = 0,
@@ -16,6 +17,7 @@ typedef enum {
 	READY,
 	TAKING_OFF,
 	FLYING,
+	LANDING,
 	TESTING,
 } state_t;
 
@@ -26,8 +28,16 @@ typedef struct {
 	float alt;
 } rc_att_ctl_t;
 
+typedef struct {
+    double dx;
+    double dy;
+    double z;
+} optflow_t;
+
 static state_t g_state = DISARMED;
 static rc_att_ctl_t g_rc_att_ctl = {0};
+static double g_downward_range = 0;
+static double g_downward_range_prev = 0;
 
 static pid_control_t g_pid_nav_x = {0};
 static pid_control_t g_pid_nav_y = {0};
@@ -48,8 +58,24 @@ int g_moving_state_roll = 0; // 0: Released, 1: Just control
 int g_moving_state_pitch = 0;
 int g_moving_state_alt = 0;
 
+static double g_landing_speed = MIN_LANDING_SPEED;
+
 static void move_in_control_update(uint8_t *data, size_t size) {
 	memcpy(&g_rc_att_ctl, data, sizeof(rc_att_ctl_t));
+}
+
+static void optflow_sensor_update(uint8_t *data, size_t size) {
+	g_downward_range = (double)(*(int*)&data[8]);
+	if (g_state == LANDING) {
+		if (g_downward_range < 2000) {
+			if (g_downward_range - g_downward_range_prev >= 0) { // Not moving down
+				g_landing_speed += 1;
+			} else if (g_downward_range - g_downward_range_prev < -20) { // Too high speed
+				g_landing_speed -= 5;
+			}
+		}
+		g_downward_range_prev = g_downward_range;
+	}
 }
 
 static void pid_setup(void) {
@@ -136,15 +162,19 @@ static void loop_100hz(uint8_t *data, size_t size) {
 		g_moving_state_roll = 0;
 	}
 
-	if (fabs(g_rc_att_ctl.alt) > 0.1) {
-		if (g_moving_state_alt == 0) {
-			g_pos_bias.z = g_pos_target.z - g_pos_final.z;
-			g_moving_state_alt = CTL_FREQ;
+	if (g_state == LANDING) {
+		g_pos_target.z = g_pos_final.z + g_pos_bias.z - g_landing_speed;
+	} else {
+		if (fabs(g_rc_att_ctl.alt) > 0.1) {
+			if (g_moving_state_alt == 0) {
+				g_pos_bias.z = g_pos_target.z - g_pos_final.z;
+				g_moving_state_alt = CTL_FREQ;
+			}
+			g_pos_target.z = g_pos_final.z + g_pos_bias.z + g_rc_att_ctl.alt * 3.0;
+		} else if (g_moving_state_alt > 0) {
+			g_pos_target.z = g_pos_final.z + g_pos_bias.z;
+			g_moving_state_alt -= 1;
 		}
-		g_pos_target.z = g_pos_final.z + g_pos_bias.z + g_rc_att_ctl.alt * 3.0;
-	} else if (g_moving_state_alt > 0) {
-		g_pos_target.z = g_pos_final.z + g_pos_bias.z;
-		g_moving_state_alt -= 1;
 	}
 
 	if (fabs(g_rc_att_ctl.yaw) > 0.1) {
@@ -159,6 +189,7 @@ void nav_control_setup(void) {
 	subscribe(NAV_POSITION_UPDATE, position_update);
 	subscribe(STATE_DETECTION_UPDATE, state_update);
 	subscribe(COMMAND_SET_MOVE_IN, move_in_control_update);
+	subscribe(EXTERNAL_SENSOR_OPTFLOW, optflow_sensor_update);
 	subscribe(SCHEDULER_1KHZ, loop_1khz);
 	subscribe(SCHEDULER_100HZ, loop_100hz);
 }

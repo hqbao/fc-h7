@@ -6,12 +6,18 @@
 #include <math.h>
 #include <macro.h>
 
+#define DISARM_RANGE_WHEN_LANDING 10
+#define DISARM_TIME_WHEN_LANDING 50
+#define DISARM_IF_EXCEEDED_ANGLE_RAGE 60
+#define ALLOWED_LANDING_RANGE 500
+
 typedef enum {
 	DISARMED = 0,
 	ARMED,
 	READY,
 	TAKING_OFF,
 	FLYING,
+	LANDING,
 	TESTING,
 } state_t;
 
@@ -40,13 +46,13 @@ typedef struct {
 } optflow_t;
 
 static angle3d_t g_angular_state = {0, 0, 0};
-static optflow_t g_optflow = {0, 0, 0};
 static rc_state_ctl_t g_rc_state_ctl;
 static rc_state_ctl_t g_rc_state_ctl_prev;
 static rc_att_ctl_t g_rc_att_ctl;
 static state_t g_state = DISARMED;
 static state_t g_state_prev = DISARMED;
 static char g_imu_calibrated = 0;
+static double g_downward_range = 0;
 
 static void state_control_update(uint8_t *data, size_t size) {
 	memcpy(&g_rc_state_ctl, data, size);
@@ -57,9 +63,7 @@ static void move_in_control_update(uint8_t *data, size_t size) {
 }
 
 static void optflow_sensor_update(uint8_t *data, size_t size) {
-	g_optflow.dx = (double)(*(int*)&data[4]);
-	g_optflow.dy = (double)(*(int*)&data[0]);
-	g_optflow.z = (double)(*(int*)&data[8]);
+	g_downward_range = (double)(*(int*)&data[8]);
 }
 
 static void on_imu_calibration_result(uint8_t *data, size_t size) {
@@ -96,20 +100,44 @@ static void loop_100hz(uint8_t *data, size_t size) {
 	}
 
 	if (g_state == TAKING_OFF) {
-		if (g_optflow.z > 100) {
+		if (g_downward_range > 100) {
 			g_state = FLYING;
 		}
 	}
 
 	if (g_state == FLYING) {
-		if (g_optflow.z < 10 && g_rc_att_ctl.alt == -90) {
+		if (g_downward_range < DISARM_RANGE_WHEN_LANDING && g_rc_att_ctl.alt == -90) {
 			g_state = DISARMED;
+		}
+
+		if (g_rc_state_ctl.state == 2 && g_rc_state_ctl_prev.state != 2) {
+			if (g_downward_range > ALLOWED_LANDING_RANGE) {
+				g_state = LANDING;
+			}
 		}
 	}
 
 	if (g_state == TAKING_OFF || g_state == FLYING) {
-		if (fabs(g_angular_state.roll) > 60 || fabs(g_angular_state.pitch) > 60) {
+		if (fabs(g_angular_state.roll) > DISARM_IF_EXCEEDED_ANGLE_RAGE
+				|| fabs(g_angular_state.pitch) > DISARM_IF_EXCEEDED_ANGLE_RAGE) {
 			g_state = DISARMED;
+		}
+	}
+
+	if (g_state == LANDING) {
+		static int landing_counter = DISARM_TIME_WHEN_LANDING;
+		if (g_downward_range < DISARM_RANGE_WHEN_LANDING) {
+			if (landing_counter < 1) {
+				g_state = DISARMED;
+			}
+
+			landing_counter--;
+		} else {
+			landing_counter = DISARM_TIME_WHEN_LANDING;
+		}
+
+		if (g_rc_state_ctl.state != 2) {
+			g_state = FLYING;
 		}
 	}
 
