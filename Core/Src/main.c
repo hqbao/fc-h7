@@ -284,7 +284,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 			g_uart_rx1.buffer[g_uart_rx1.buffer_idx] = g_uart_rx1.byte;
 			g_uart_rx1.buffer_idx++;
 			if (g_uart_rx1.buffer_idx == 4) {
-				g_uart_rx1.payload_size = * (uint16_t * ) & g_uart_rx1.buffer[2];
+				g_uart_rx1.payload_size = * (uint16_t * )&g_uart_rx1.buffer[2];
 				g_uart_rx1.stage = 5;
 			}
 		} else {
@@ -324,7 +324,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 			g_uart_rx2.buffer[g_uart_rx2.buffer_idx] = g_uart_rx2.byte;
 			g_uart_rx2.buffer_idx++;
 			if (g_uart_rx2.buffer_idx == 4) {
-				g_uart_rx2.payload_size = * (uint16_t * ) & g_uart_rx2.buffer[2];
+				g_uart_rx2.payload_size = * (uint16_t * )&g_uart_rx2.buffer[2];
 				g_uart_rx2.stage = 5;
 			}
 		} else {
@@ -367,7 +367,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 				g_rc_param_idx = 0;
 
 				int roll 	= g_rc_params[3] - 1500;
-				int pitch = g_rc_params[2] - 1500;
+				int pitch 	= g_rc_params[2] - 1500;
 				int yaw 	= g_rc_params[0] - 1500;
 				int alt 	= g_rc_params[1] - 1500;
 				uint8_t state = g_rc_params[4] < 1250 ? 0 : (g_rc_params[4] > 1750 ? 2 : 1);
