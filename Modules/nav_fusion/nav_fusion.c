@@ -45,7 +45,7 @@ static vector3d_t g_linear_accel = {0, 0, 0};
 static vector3d_t g_linear_veloc = {0, 0, 0};
 static vector3d_t g_linear_veloc_bias = {0, 0, 0};
 static vector3d_t g_linear_veloc_final = {0, 0, 0};
-static vector3d_t g_local_pos = {0, 0, 0};
+static vector3d_t g_pos_true = {0, 0, 0};
 static vector3d_t g_pos = {0, 0, 0};
 static vector3d_t g_pos_bias = {0, 0, 0};
 static vector3d_t g_pos_final = {0, 0, 0};
@@ -71,8 +71,8 @@ static void optflow_sensor_update(uint8_t *data, size_t size) {
 	g_optflow.dy = (double)(*(int*)&data[0]) * coef3;
 	g_optflow.z = (double)(*(int*)&data[8]);
 
-	g_local_pos.x += g_optflow.dx;
-	g_local_pos.y += g_optflow.dy;
+	g_pos_true.x += g_optflow.dx;
+	g_pos_true.y += g_optflow.dy;
 
 	g_linear_veloc.x += coef41 * (g_optflow.dx - g_linear_veloc.x);
 	g_linear_veloc.y += coef41 * (g_optflow.dy - g_linear_veloc.y);
@@ -86,7 +86,7 @@ static void optflow_sensor_update(uint8_t *data, size_t size) {
 		g_alt_d = g_alt - g_alt_prev;
 		g_alt_prev = g_alt;
 		g_linear_veloc.z += coef421 * (g_alt_d * coef43 - g_linear_veloc.z);
-		g_local_pos.z += g_alt_d;
+		g_pos_true.z += g_alt_d;
 
 		g_rc_state_ctl_prev.mode = g_rc_state_ctl.mode;
 	}
@@ -109,7 +109,7 @@ static void air_pressure_update(uint8_t *data, size_t size) {
 		g_alt_d = g_alt - g_alt_prev;
 		g_alt_prev = g_alt;
 		g_linear_veloc.z += coef422 * (g_alt_d * coef43 - g_linear_veloc.z);
-		g_local_pos.z += g_alt_d;
+		g_pos_true.z += g_alt_d;
 
 		g_rc_state_ctl_prev.mode = g_rc_state_ctl.mode;
 	}
@@ -129,9 +129,9 @@ static void linear_accel_update(uint8_t *data, size_t size) {
 	g_pos.y += coef1 / IMU_FREQ * g_linear_veloc.y;
 	//g_pos.z += coef1 / IMU_FREQ * g_linear_veloc.z;
 
-	g_pos.x += coef2 / IMU_FREQ * (g_local_pos.x - g_pos.x);
-	g_pos.y += coef2 / IMU_FREQ * (g_local_pos.y - g_pos.y);
-	g_pos.z += coef2 / IMU_FREQ * (g_local_pos.z - g_pos.z);
+	g_pos.x += coef2 / IMU_FREQ * (g_pos_true.x - g_pos.x);
+	g_pos.y += coef2 / IMU_FREQ * (g_pos_true.y - g_pos.y);
+	g_pos.z += coef2 / IMU_FREQ * (g_pos_true.z - g_pos.z);
 }
 
 static void loop_1khz(uint8_t *data, size_t size) {
