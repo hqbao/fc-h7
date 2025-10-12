@@ -7,9 +7,9 @@
 
 void dps310_i2c_init(void);
 
-char dps310_i2c_read(uint8_t address, uint8_t reg, uint8_t *data, uint16_t count);
+int8_t dps310_i2c_read(uint8_t address, uint8_t reg, uint8_t *data, uint16_t count);
 
-char dps310_i2c_write(uint8_t address, uint8_t reg, const uint8_t *data, uint16_t count);
+int8_t dps310_i2c_write(uint8_t address, uint8_t reg, const uint8_t *data, uint16_t count);
 
 void dps310_i2c_wakeup();
 
