@@ -28,6 +28,8 @@ typedef struct {
     // Kalman gain
     matrix_t K; // 4x3
 
+    char no_correction;
+
     vector3d_t true_norm_accel;
     vector3d_t pred_norm_accel;
     vector3d_t true_euler_angle;
@@ -54,8 +56,8 @@ typedef struct {
     matrix_t KH; // 4x3
 } filter3_t;
 
-void filter3_init(filter3_t *f, float gyro_noise, float accel_noise);
-void filter3_predict(filter3_t *f, float gx, float gy, float gz, float dt);
-void filter3_update(filter3_t *f, float ax, float ay, float az);
+void filter3_init(filter3_t *f, double gyro_noise, double accel_noise);
+void filter3_predict(filter3_t *f, double gx, double gy, double gz, double dt);
+void filter3_update(filter3_t *f, double ax, double ay, double az);
 
 #endif

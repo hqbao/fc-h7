@@ -4,7 +4,7 @@
 #define MATRIX_MAX_SIZE 4
 
 typedef struct {
-    float data[MATRIX_MAX_SIZE][MATRIX_MAX_SIZE];
+    double data[MATRIX_MAX_SIZE][MATRIX_MAX_SIZE];
     int rows;
     int cols;
 } matrix_t;
@@ -28,7 +28,7 @@ void matrix_sub(matrix_t* result, const matrix_t* a, const matrix_t* b);
 void matrix_transpose(matrix_t* result, const matrix_t* a);
 
 // Matrix scalar multiplication
-void matrix_scale(matrix_t* result, const matrix_t* a, float s);
+void matrix_scale(matrix_t* result, const matrix_t* a, double s);
 
 // Copy matrix (result = a)
 void matrix_copy(matrix_t* result, const matrix_t* a);
